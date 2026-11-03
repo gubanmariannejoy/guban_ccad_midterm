@@ -8,8 +8,6 @@ use App\Models\PlantInventory;
 use App\Models\PlantSpecies;
 use App\Models\SaleItem;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class NurserySaleService
@@ -50,11 +48,15 @@ class NurserySaleService
 
     public function createSale(array $data): NurserySale
     {
-        $data = $this->validateSaleData($data);
+        $data = $this->sanitizeSaleData($data);
 
         return DB::transaction(function () use ($data) {
+            $buyerId = isset($data['new_buyer'])
+                ? $this->createBuyer($data['new_buyer'])->id
+                : $data['buyer_id'];
+
             $sale = NurserySale::create([
-                'buyer_id' => $data['buyer_id'],
+                'buyer_id' => $buyerId,
                 'payment_method' => $data['payment_method'],
                 'discount_rate' => $data['discount_rate'],
                 'dispatch_date' => $data['dispatch_date'] ?? null,
@@ -159,6 +161,7 @@ class NurserySaleService
 
     public function formatContactNumber(string $contact): string
     {
+        $contact = $this->sanitizeText($contact);
         $digits = preg_replace('/\D+/', '', $contact) ?? '';
 
         if (str_starts_with($digits, '63')) {
@@ -176,7 +179,7 @@ class NurserySaleService
         int|string $id,
         array $data
     ): NurserySale {
-        $data = $this->validateSaleData($data, true);
+        $data = $this->sanitizeSaleData($data);
 
         return DB::transaction(function () use ($id, $data) {
             $sale = NurserySale::whereKey($id)
@@ -191,8 +194,13 @@ class NurserySaleService
 
             $details = [];
 
+            if (isset($data['new_buyer'])) {
+                $details['buyer_id'] = $this->createBuyer($data['new_buyer'])->id;
+            } elseif (array_key_exists('buyer_id', $data)) {
+                $details['buyer_id'] = $data['buyer_id'];
+            }
+
             foreach ([
-                'buyer_id',
                 'payment_method',
                 'discount_rate',
                 'dispatch_date',
@@ -269,10 +277,11 @@ class NurserySaleService
         });
     }
 
-    private function validateSaleData(array $data, bool $updating = false): array
+    private function sanitizeSaleData(array $data): array
     {
         $allowedFields = [
             'buyer_id',
+            'new_buyer',
             'payment_method',
             'discount_rate',
             'dispatch_date',
@@ -281,9 +290,36 @@ class NurserySaleService
 
         $data = array_intersect_key($data, array_flip($allowedFields));
 
+        if (isset($data['new_buyer']) && is_array($data['new_buyer'])) {
+            $data['new_buyer'] = array_intersect_key(
+                $data['new_buyer'],
+                array_flip(['buyer_name', 'contact_no'])
+            );
+
+            foreach (['buyer_name', 'contact_no'] as $field) {
+                if (isset($data['new_buyer'][$field]) && is_string($data['new_buyer'][$field])) {
+                    $data['new_buyer'][$field] = $this->sanitizeText($data['new_buyer'][$field]);
+                }
+            }
+
+            if (is_string($data['new_buyer']['buyer_name'] ?? null)) {
+                $data['new_buyer']['buyer_name'] = mb_convert_case(
+                    mb_strtolower($data['new_buyer']['buyer_name']),
+                    MB_CASE_TITLE,
+                    'UTF-8'
+                );
+            }
+
+            if (is_string($data['new_buyer']['contact_no'] ?? null)) {
+                $data['new_buyer']['contact_no'] = $this->formatContactNumber(
+                    $data['new_buyer']['contact_no']
+                );
+            }
+        }
+
         foreach (['payment_method', 'dispatch_date'] as $field) {
             if (isset($data[$field]) && is_string($data[$field])) {
-                $data[$field] = strip_tags(trim($data[$field]));
+                $data[$field] = $this->sanitizeText($data[$field]);
             }
         }
 
@@ -299,48 +335,20 @@ class NurserySaleService
             );
         }
 
-        $rules = [
-            'payment_method' => [
-                ...($updating ? ['sometimes', 'required'] : ['required']),
-                Rule::in(['Cash', 'GCash', 'Bank Transfer']),
-            ],
-            'discount_rate' => [
-                ...($updating ? ['sometimes', 'required'] : ['required']),
-                'numeric',
-                'between:0,1',
-            ],
-            'dispatch_date' => [
-                'sometimes',
-                'nullable',
-                'date',
-                'after_or_equal:today',
-            ],
-            'items' => [
-                ...($updating ? ['sometimes', 'required'] : ['required']),
-                'array',
-                'min:1',
-            ],
-            'items.*' => ['array:plant_species_id,quantity_bought'],
-            'items.*.plant_species_id' => [
-                'required',
-                'integer',
-                'distinct',
-                'exists:plant_species,id',
-            ],
-            'items.*.quantity_bought' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:100000',
-            ],
-        ];
+        return $data;
+    }
 
-        if (! $updating) {
-            $rules['buyer_id'] = ['required', 'integer', 'exists:buyers,id'];
-        } else {
-            $rules['buyer_id'] = ['sometimes', 'required', 'integer', 'exists:buyers,id'];
-        }
+    private function createBuyer(array $data): Buyer
+    {
+        return Buyer::create($data);
+    }
 
-        return Validator::make($data, $rules)->validate();
+    private function sanitizeText(string $value): string
+    {
+        $value = strip_tags($value);
+        $value = preg_replace('/[\x00-\x1F\x7F]+/', ' ', $value);
+        $value = preg_replace('/\s+/u', ' ', $value);
+
+        return trim($value ?? '');
     }
 }

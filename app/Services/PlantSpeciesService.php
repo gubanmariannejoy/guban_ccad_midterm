@@ -83,7 +83,7 @@ class PlantSpeciesService
 
         foreach (['plant_name', 'botanical_name', 'pot_size'] as $field) {
             if (isset($data[$field]) && is_string($data[$field])) {
-                $data[$field] = strip_tags(trim($data[$field]));
+                $data[$field] = $this->sanitizeText($data[$field]);
             }
         }
 
@@ -111,5 +111,14 @@ class PlantSpeciesService
                 'max:99999999.99',
             ],
         ])->validate();
+    }
+
+    private function sanitizeText(string $value): string
+    {
+        $value = strip_tags($value);
+        $value = preg_replace('/[\x00-\x1F\x7F]+/', ' ', $value);
+        $value = preg_replace('/\s+/u', ' ', $value);
+
+        return trim($value ?? '');
     }
 }

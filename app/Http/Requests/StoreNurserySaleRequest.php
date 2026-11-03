@@ -15,7 +15,10 @@ class StoreNurserySaleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'buyer_id' => ['required', 'integer', 'exists:buyers,id'],
+            'buyer_id' => ['required_without:new_buyer', 'nullable', 'integer', 'exists:buyers,id'],
+            'new_buyer' => ['required_without:buyer_id', 'array:buyer_name,contact_no'],
+            'new_buyer.buyer_name' => ['required_with:new_buyer', 'string', 'max:150'],
+            'new_buyer.contact_no' => ['required_with:new_buyer', 'string', 'max:20'],
 
             'payment_method' => [
                 'required',
@@ -49,6 +52,9 @@ class StoreNurserySaleRequest extends FormRequest
     {
         return [
             'buyer_id.exists' => 'The selected buyer does not exist.',
+            'new_buyer.buyer_name.required_with' => 'Enter the buyer name.',
+            'new_buyer.contact_no.required_with' => 'Enter the buyer contact number.',
+            'new_buyer.contact_no.max' => 'The buyer contact number may not exceed 20 characters.',
             'payment_method.in' => 'Select a supported payment method.',
             'discount_rate.between' => 'The discount must be between 0 and 1.',
             'dispatch_date.after_or_equal' => 'The dispatch date cannot be in the past.',

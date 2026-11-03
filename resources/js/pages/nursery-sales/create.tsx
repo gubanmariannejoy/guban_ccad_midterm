@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { type FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { type FormEventHandler } from 'react';
+import { useState, type FormEventHandler } from 'react';
 
 interface BuyerOption {
     id: number;
@@ -33,11 +34,31 @@ interface SaleRecord {
     }[];
 }
 
+interface NurserySaleForm extends Record<string, FormDataConvertible> {
+    buyer_id: string;
+    new_buyer: {
+        buyer_name: string;
+        contact_no: string;
+    };
+    payment_method: string;
+    discount_rate: string;
+    dispatch_date: string;
+    items: {
+        plant_species_id: string;
+        quantity_bought: number;
+    }[];
+}
+
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Nursery sales', href: route('nursery-sales.index') }];
 
 export default function CreateNurserySale({ buyers, plants, sale }: { buyers: BuyerOption[]; plants: PlantOption[]; sale?: SaleRecord }) {
-    const { data, setData, post, put, processing, errors } = useForm({
+    const [addingBuyer, setAddingBuyer] = useState(false);
+    const { data, setData, post, put, transform, processing, errors } = useForm<NurserySaleForm>({
         buyer_id: sale ? String(sale.buyer_id) : '',
+        new_buyer: {
+            buyer_name: '',
+            contact_no: '',
+        },
         payment_method: sale?.payment_method ?? 'Cash',
         discount_rate: sale?.discount_rate ?? '0',
         dispatch_date: sale?.dispatch_date?.slice(0, 10) ?? '',
@@ -49,6 +70,16 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
 
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
+        transform((formData) => {
+            const { buyer_id, new_buyer, ...saleData } = formData;
+
+            if (addingBuyer) {
+                return { ...saleData, buyer_id: null, new_buyer };
+            }
+
+            return { ...saleData, buyer_id: Number(buyer_id) };
+        });
+
         if (sale) {
             put(route('nursery-sales.update', sale.id));
             return;
@@ -73,13 +104,29 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
 
                 <form onSubmit={submit} className="flex flex-col gap-5">
                     <div className="grid gap-2">
-                        <Label htmlFor="buyer_id">Buyer</Label>
+                        <div className="flex items-center justify-between gap-3">
+                            <Label htmlFor="buyer_id">Buyer</Label>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setAddingBuyer((isAdding) => !isAdding);
+                                    if (!addingBuyer) {
+                                        setData('buyer_id', '');
+                                    }
+                                }}
+                            >
+                                {addingBuyer ? 'Choose existing buyer' : 'Add buyer'}
+                            </Button>
+                        </div>
                         <select
                             id="buyer_id"
                             className="bg-background h-10 rounded-md border px-3 text-sm"
                             value={data.buyer_id}
+                            disabled={addingBuyer}
+                            required={!addingBuyer}
                             onChange={(event) => setData('buyer_id', event.target.value)}
-                            required
                         >
                             <option value="">Select a buyer</option>
                             {buyers.map((buyer) => (
@@ -90,6 +137,35 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                         </select>
                         <InputError message={errors.buyer_id} />
                     </div>
+
+                    {addingBuyer && (
+                        <section className="grid gap-4 rounded-lg border p-4">
+                            <h2 className="font-medium">New buyer details</h2>
+                            <p className="text-muted-foreground text-sm">The buyer will be saved together with this sale.</p>
+                            <div className="grid gap-2">
+                                <Label htmlFor="new_buyer_name">Buyer name</Label>
+                                <Input
+                                    id="new_buyer_name"
+                                    value={data.new_buyer.buyer_name}
+                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, buyer_name: event.target.value })}
+                                    required
+                                />
+                                <InputError message={errors['new_buyer.buyer_name']} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="new_buyer_contact">Contact number</Label>
+                                <Input
+                                    id="new_buyer_contact"
+                                    type="tel"
+                                    maxLength={20}
+                                    value={data.new_buyer.contact_no}
+                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, contact_no: event.target.value })}
+                                    required
+                                />
+                                <InputError message={errors['new_buyer.contact_no']} />
+                            </div>
+                        </section>
+                    )}
 
                     <div className="grid gap-2">
                         <Label htmlFor="payment_method">Payment method</Label>
@@ -198,14 +274,14 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                     </section>
 
                     <div className="flex gap-3">
-                        <Button type="submit" disabled={processing || buyers.length === 0 || plants.length === 0}>
+                        <Button type="submit" disabled={processing || (buyers.length === 0 && !addingBuyer) || plants.length === 0}>
                             {sale ? 'Update sale' : 'Save sale'}
                         </Button>
                         <Button variant="outline" asChild>
                             <Link href={route('nursery-sales.index')}>Cancel</Link>
                         </Button>
                     </div>
-                    {buyers.length === 0 && <p className="text-destructive text-sm">Add a buyer before creating a sale.</p>}
+                    {buyers.length === 0 && !addingBuyer && <p className="text-destructive text-sm">Add a buyer before creating a sale.</p>}
                     {plants.length === 0 && <p className="text-destructive text-sm">Add a plant species before creating a sale.</p>}
                 </form>
             </main>

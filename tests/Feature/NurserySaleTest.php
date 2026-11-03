@@ -90,7 +90,7 @@ class NurserySaleTest extends TestCase
     public function test_pending_sales_can_be_edited_and_deleted(): void
     {
         $this->withoutVite();
-        $this->actingAs(\App\Models\User::factory()->create());
+        $this->actingAs(User::factory()->create());
 
         $buyer = Buyer::create([
             'buyer_name' => 'Alice Buyer',
@@ -137,6 +137,40 @@ class NurserySaleTest extends TestCase
 
         $this->assertDatabaseMissing('nursery_sales', ['id' => $sale->id]);
         $this->assertDatabaseMissing('sale_items', ['nursery_sale_id' => $sale->id]);
+    }
+
+    public function test_a_buyer_can_be_added_while_creating_a_nursery_sale(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $plant = app(PlantSpeciesService::class)->createPlantSpecies([
+            'plant_name' => 'Rose',
+            'botanical_name' => 'Rosa rubiginosa',
+            'pot_size' => '6 Inch',
+            'unit_price' => 150,
+        ]);
+
+        $this->post(route('nursery-sales.store'), [
+            'buyer_id' => null,
+            'new_buyer' => [
+                'buyer_name' => "<b>alice\t  buyer</b>",
+                'contact_no' => '<i>0917-1234567</i>',
+            ],
+            'payment_method' => 'Cash',
+            'discount_rate' => 0.1,
+            'items' => [[
+                'plant_species_id' => $plant->id,
+                'quantity_bought' => 2,
+            ]],
+        ])->assertRedirect(route('nursery-sales.index'));
+
+        $buyer = Buyer::query()->firstOrFail();
+        $this->assertSame('Alice Buyer', $buyer->buyer_name);
+        $this->assertSame('+639171234567', $buyer->contact_no);
+
+        $sale = NurserySale::query()->firstOrFail();
+        $this->assertSame($buyer->id, $sale->buyer_id);
+        $this->assertSame('270.00', (string) $sale->total_amount);
     }
 
     public function test_sale_confirmation_deducts_inventory_once(): void
@@ -200,14 +234,14 @@ class NurserySaleTest extends TestCase
     public function test_service_sanitizes_plant_fields_and_validates_values(): void
     {
         $plant = app(PlantSpeciesService::class)->createPlantSpecies([
-            'plant_name' => '<b> fern </b>',
+            'plant_name' => "<b> fern\t  plant </b>",
             'botanical_name' => '<i>nephrolepis exaltata</i>',
-            'pot_size' => ' 6 Inch ',
+            'pot_size' => ' 6   Inch ',
             'unit_price' => 24.50,
             'unexpected' => 'ignored',
         ]);
 
-        $this->assertSame('Fern', $plant->plant_name);
+        $this->assertSame('Fern Plant', $plant->plant_name);
         $this->assertSame('Nephrolepis Exaltata', $plant->botanical_name);
         $this->assertSame('6 Inch', $plant->pot_size);
 
@@ -224,7 +258,7 @@ class NurserySaleTest extends TestCase
         }
     }
 
-    public function test_service_sanitizes_and_validates_sale_data(): void
+    public function test_service_sanitizes_sale_data(): void
     {
         $buyer = Buyer::create([
             'buyer_name' => 'Alice Buyer',
@@ -252,9 +286,26 @@ class NurserySaleTest extends TestCase
 
         $this->assertSame('Cash', $sale->payment_method);
         $this->assertSame('135.00', (string) $sale->total_amount);
+    }
 
-        try {
-            app(NurserySaleService::class)->createSale([
+    public function test_store_request_validates_sale_data(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $buyer = Buyer::create([
+            'buyer_name' => 'Alice Buyer',
+            'contact_no' => '09171234567',
+        ]);
+
+        $plant = PlantSpecies::create([
+            'plant_name' => 'Rose',
+            'botanical_name' => 'Rosa rubiginosa',
+            'pot_size' => '6 Inch',
+            'unit_price' => 150.00,
+        ]);
+
+        $this->from(route('nursery-sales.create'))
+            ->post(route('nursery-sales.store'), [
                 'buyer_id' => $buyer->id,
                 'payment_method' => 'Cash',
                 'discount_rate' => 1.5,
@@ -262,10 +313,9 @@ class NurserySaleTest extends TestCase
                     'plant_species_id' => $plant->id,
                     'quantity_bought' => 1,
                 ]],
-            ]);
-            $this->fail('Invalid discount data should be rejected.');
-        } catch (ValidationException) {
-            $this->assertDatabaseCount('nursery_sales', 1);
-        }
+            ])
+            ->assertSessionHasErrors('discount_rate');
+
+        $this->assertDatabaseCount('nursery_sales', 0);
     }
 }

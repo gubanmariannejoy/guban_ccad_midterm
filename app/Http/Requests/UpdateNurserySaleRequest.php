@@ -15,7 +15,10 @@ class UpdateNurserySaleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'buyer_id' => ['sometimes', 'required', 'integer', 'exists:buyers,id'],
+            'buyer_id' => ['sometimes', 'nullable', 'integer', 'exists:buyers,id'],
+            'new_buyer' => ['sometimes', 'array:buyer_name,contact_no'],
+            'new_buyer.buyer_name' => ['required_with:new_buyer', 'string', 'max:150'],
+            'new_buyer.contact_no' => ['required_with:new_buyer', 'string', 'max:20'],
 
             'payment_method' => [
                 'sometimes',
@@ -50,6 +53,9 @@ class UpdateNurserySaleRequest extends FormRequest
     {
         return [
             'buyer_id.exists' => 'The selected buyer does not exist.',
+            'new_buyer.buyer_name.required_with' => 'Enter the buyer name.',
+            'new_buyer.contact_no.required_with' => 'Enter the buyer contact number.',
+            'new_buyer.contact_no.max' => 'The buyer contact number may not exceed 20 characters.',
             'discount_rate.between' => 'The discount must be between 0 and 1.',
             'payment_method.in' => 'Select a supported payment method.',
             'dispatch_date.after_or_equal' => 'The dispatch date cannot be in the past.',
