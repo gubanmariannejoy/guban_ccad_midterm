@@ -4,13 +4,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { capitalizeFirstLetter } from '@/lib/utils';
 import { type FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState, type FormEventHandler } from 'react';
+import { CalendarDays } from 'lucide-react';
+import { useRef, useState, type FormEventHandler } from 'react';
 
 interface BuyerOption {
     id: number;
-    buyer_name: string;
+    name: string;
+    email: string;
     contact_no: string;
 }
 
@@ -23,7 +26,7 @@ interface PlantOption {
 
 interface SaleRecord {
     id: number;
-    buyer_id: number;
+    user_id: number;
     payment_method: string;
     discount_rate: string;
     dispatch_date: string | null;
@@ -35,10 +38,12 @@ interface SaleRecord {
 }
 
 interface NurserySaleForm extends Record<string, FormDataConvertible> {
-    buyer_id: string;
+    user_id: string;
     new_buyer: {
-        buyer_name: string;
+        name: string;
+        email: string;
         contact_no: string;
+        password: string;
     };
     payment_method: string;
     discount_rate: string;
@@ -53,11 +58,14 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Nursery sales', href: route('nu
 
 export default function CreateNurserySale({ buyers, plants, sale }: { buyers: BuyerOption[]; plants: PlantOption[]; sale?: SaleRecord }) {
     const [addingBuyer, setAddingBuyer] = useState(false);
+    const dispatchDateRef = useRef<HTMLInputElement>(null);
     const { data, setData, post, put, transform, processing, errors } = useForm<NurserySaleForm>({
-        buyer_id: sale ? String(sale.buyer_id) : '',
+        user_id: sale ? String(sale.user_id) : '',
         new_buyer: {
-            buyer_name: '',
+            name: '',
+            email: '',
             contact_no: '',
+            password: '',
         },
         payment_method: sale?.payment_method ?? 'Cash',
         discount_rate: sale?.discount_rate ?? '0',
@@ -71,13 +79,13 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
         transform((formData) => {
-            const { buyer_id, new_buyer, ...saleData } = formData;
+            const { user_id, new_buyer, ...saleData } = formData;
 
             if (addingBuyer) {
-                return { ...saleData, buyer_id: null, new_buyer };
+                return { ...saleData, user_id: null, new_buyer };
             }
 
-            return { ...saleData, buyer_id: Number(buyer_id) };
+            return { ...saleData, user_id: Number(user_id) };
         });
 
         if (sale) {
@@ -105,7 +113,7 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                 <form onSubmit={submit} className="flex flex-col gap-5">
                     <div className="grid gap-2">
                         <div className="flex items-center justify-between gap-3">
-                            <Label htmlFor="buyer_id">Buyer</Label>
+                            <Label htmlFor="user_id">Buyer account</Label>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -113,7 +121,7 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                                 onClick={() => {
                                     setAddingBuyer((isAdding) => !isAdding);
                                     if (!addingBuyer) {
-                                        setData('buyer_id', '');
+                                        setData('user_id', '');
                                     }
                                 }}
                             >
@@ -121,48 +129,88 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                             </Button>
                         </div>
                         <select
-                            id="buyer_id"
+                            id="user_id"
                             className="bg-background h-10 rounded-md border px-3 text-sm"
-                            value={data.buyer_id}
+                            value={data.user_id}
                             disabled={addingBuyer}
                             required={!addingBuyer}
-                            onChange={(event) => setData('buyer_id', event.target.value)}
+                            onChange={(event) => setData('user_id', event.target.value)}
                         >
-                            <option value="">Select a buyer</option>
+                            <option value="">Select a registered user</option>
                             {buyers.map((buyer) => (
                                 <option key={buyer.id} value={buyer.id}>
-                                    {buyer.buyer_name} ({buyer.contact_no})
+                                    {buyer.name} — {buyer.email} ({buyer.contact_no})
                                 </option>
                             ))}
                         </select>
-                        <InputError message={errors.buyer_id} />
+                        <InputError message={errors.user_id} />
                     </div>
 
                     {addingBuyer && (
                         <section className="grid gap-4 rounded-lg border p-4">
-                            <h2 className="font-medium">New buyer details</h2>
-                            <p className="text-muted-foreground text-sm">The buyer will be saved together with this sale.</p>
+                            <h2 className="font-medium">New buyer account</h2>
+                            <p className="text-muted-foreground text-sm">
+                                Create a user account for this buyer. They can sign in with these credentials.
+                            </p>
                             <div className="grid gap-2">
                                 <Label htmlFor="new_buyer_name">Buyer name</Label>
                                 <Input
                                     id="new_buyer_name"
-                                    value={data.new_buyer.buyer_name}
-                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, buyer_name: event.target.value })}
+                                    value={data.new_buyer.name}
+                                    onChange={(event) =>
+                                        setData('new_buyer', {
+                                            ...data.new_buyer,
+                                            name: capitalizeFirstLetter(event.target.value),
+                                        })
+                                    }
                                     required
                                 />
-                                <InputError message={errors['new_buyer.buyer_name']} />
+                                <InputError message={errors['new_buyer.name']} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="new_buyer_email">Email</Label>
+                                <Input
+                                    id="new_buyer_email"
+                                    type="email"
+                                    autoComplete="email"
+                                    value={data.new_buyer.email}
+                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, email: event.target.value })}
+                                    required
+                                />
+                                <InputError message={errors['new_buyer.email']} />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="new_buyer_contact">Contact number</Label>
                                 <Input
                                     id="new_buyer_contact"
                                     type="tel"
-                                    maxLength={20}
+                                    inputMode="numeric"
+                                    maxLength={11}
+                                    pattern="[0-9]{11}"
+                                    title="Enter exactly 11 digits."
                                     value={data.new_buyer.contact_no}
-                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, contact_no: event.target.value })}
+                                    onChange={(event) =>
+                                        setData('new_buyer', {
+                                            ...data.new_buyer,
+                                            contact_no: event.target.value.replace(/[^0-9]/g, '').slice(0, 11),
+                                        })
+                                    }
                                     required
                                 />
                                 <InputError message={errors['new_buyer.contact_no']} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="new_buyer_password">Temporary password</Label>
+                                <Input
+                                    id="new_buyer_password"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    minLength={8}
+                                    value={data.new_buyer.password}
+                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, password: event.target.value })}
+                                    required
+                                />
+                                <InputError message={errors['new_buyer.password']} />
                             </div>
                         </section>
                     )}
@@ -199,13 +247,40 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
 
                     <div className="grid gap-2">
                         <Label htmlFor="dispatch_date">Dispatch date</Label>
-                        <Input
-                            id="dispatch_date"
-                            type="date"
-                            min={new Date().toISOString().slice(0, 10)}
-                            value={data.dispatch_date}
-                            onChange={(event) => setData('dispatch_date', event.target.value)}
-                        />
+                        <div className="flex gap-2">
+                            <Input
+                                ref={dispatchDateRef}
+                                id="dispatch_date"
+                                type="date"
+                                min={new Date().toISOString().slice(0, 10)}
+                                max="2029-12-31"
+                                value={data.dispatch_date}
+                                onChange={(event) => {
+                                    const value = event.target.value;
+                                    if (value && Number(value.slice(0, 4)) > 2029) return;
+                                    setData('dispatch_date', value);
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                aria-label="Open dispatch date calendar"
+                                onClick={() => {
+                                    const input = dispatchDateRef.current;
+                                    if (!input) return;
+
+                                    if (typeof input.showPicker === 'function') {
+                                        input.showPicker();
+                                    } else {
+                                        input.focus();
+                                        input.click();
+                                    }
+                                }}
+                            >
+                                <CalendarDays aria-hidden="true" />
+                            </Button>
+                        </div>
                         <InputError message={errors.dispatch_date} />
                     </div>
 

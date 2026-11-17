@@ -6,7 +6,9 @@ use App\Http\Requests\StorePlantSpeciesRequest;
 use App\Http\Requests\UpdatePlantSpeciesRequest;
 use App\Models\PlantSpecies;
 use App\Services\PlantSpeciesService;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class PlantSpeciesController extends Controller
 {
@@ -14,7 +16,7 @@ class PlantSpeciesController extends Controller
         private PlantSpeciesService $service
     ) {}
 
-    public function index()
+    public function index(): Response
     {
         $plants = PlantSpecies::with('inventory')
             ->withCount('saleItems')
@@ -24,19 +26,19 @@ class PlantSpeciesController extends Controller
         return Inertia::render('plant-species/index', compact('plants'));
     }
 
-    public function create()
+    public function create(): Response
     {
         return Inertia::render('plant-species/create');
     }
 
-    public function edit($id)
+    public function edit(int|string $id): Response
     {
         return Inertia::render('plant-species/create', [
             'plant' => $this->service->findForEdit($id),
         ]);
     }
 
-    public function store(StorePlantSpeciesRequest $request)
+    public function store(StorePlantSpeciesRequest $request): RedirectResponse
     {
         $this->service->createPlantSpecies($request->validated());
 
@@ -47,8 +49,8 @@ class PlantSpeciesController extends Controller
 
     public function update(
         UpdatePlantSpeciesRequest $request,
-        $id
-    ) {
+        int|string $id
+    ): RedirectResponse {
         $this->service->updatePlantSpecies(
             $id,
             $request->validated()
@@ -59,7 +61,7 @@ class PlantSpeciesController extends Controller
             ->with('success', 'Plant species updated successfully.');
     }
 
-    public function destroy($id)
+    public function destroy(int|string $id): RedirectResponse
     {
         $this->service->deletePlantSpecies($id);
 

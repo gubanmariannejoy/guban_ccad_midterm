@@ -2,20 +2,22 @@
 
 namespace App\Services;
 
-use App\Models\Buyer;
 use App\Models\NurserySale;
 use App\Models\PlantInventory;
 use App\Models\PlantSpecies;
 use App\Models\SaleItem;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class NurserySaleService
 {
     public function creationData(): array
     {
-        $buyers = Buyer::orderBy('buyer_name')
-            ->get();
+        $buyers = User::orderBy('name')
+            ->get(['id', 'name', 'email', 'contact_no']);
 
         $buyers->each(function ($buyer): void {
             $buyer->contact_no = $this->formatContactNumber((string) $buyer->contact_no);
@@ -48,15 +50,15 @@ class NurserySaleService
 
     public function createSale(array $data): NurserySale
     {
-        $data = $this->sanitizeSaleData($data);
+        $data = $this->validateSaleData($this->sanitizeSaleData($data));
 
         return DB::transaction(function () use ($data) {
-            $buyerId = isset($data['new_buyer'])
+            $userId = isset($data['new_buyer'])
                 ? $this->createBuyer($data['new_buyer'])->id
-                : $data['buyer_id'];
+                : $data['user_id'];
 
             $sale = NurserySale::create([
-                'buyer_id' => $buyerId,
+                'user_id' => $userId,
                 'payment_method' => $data['payment_method'],
                 'discount_rate' => $data['discount_rate'],
                 'dispatch_date' => $data['dispatch_date'] ?? null,
@@ -66,9 +68,7 @@ class NurserySaleService
             $subtotal = 0;
 
             foreach ($data['items'] as $item) {
-                $plant = PlantSpecies::findOrFail(
-                    $item['plant_species_id']
-                );
+                $plant = PlantSpecies::findOrFail($item['plant_species_id']);
 
                 $quantity = (int) $item['quantity_bought'];
                 $unitPrice = (float) $plant->unit_price;
@@ -111,9 +111,7 @@ class NurserySaleService
                 ]);
             }
 
-            $items = $sale->saleItems()
-                ->with('plantSpecies')
-                ->get();
+            $items = $sale->saleItems;
 
             if ($items->isEmpty()) {
                 throw ValidationException::withMessages([
@@ -129,11 +127,13 @@ class NurserySaleService
                     ->lockForUpdate()
                     ->first();
 
-                if (! $inventory ||
-                    $inventory->quantity_available < $item->quantity_bought) {
+                if (
+                    ! $inventory ||
+                    $inventory->quantity_available < $item->quantity_bought
+                ) {
                     throw ValidationException::withMessages([
-                        'inventory' => 'Insufficient stock for '.
-                            $item->plantSpecies->plant_name.'.',
+                        'inventory' => 'Insufficient stock for ' .
+                            $item->plantSpecies->plant_name . '.',
                     ]);
                 }
 
@@ -165,11 +165,11 @@ class NurserySaleService
         $digits = preg_replace('/\D+/', '', $contact) ?? '';
 
         if (str_starts_with($digits, '63')) {
-            return '+'.$digits;
+            return '+' . $digits;
         }
 
         if (str_starts_with($digits, '09') && strlen($digits) === 11) {
-            return '+63'.substr($digits, 1);
+            return '+63' . substr($digits, 1);
         }
 
         return $digits;
@@ -179,7 +179,10 @@ class NurserySaleService
         int|string $id,
         array $data
     ): NurserySale {
-        $data = $this->sanitizeSaleData($data);
+        $data = $this->validateSaleData(
+            $this->sanitizeSaleData($data),
+            updating: true
+        );
 
         return DB::transaction(function () use ($id, $data) {
             $sale = NurserySale::whereKey($id)
@@ -195,16 +198,18 @@ class NurserySaleService
             $details = [];
 
             if (isset($data['new_buyer'])) {
-                $details['buyer_id'] = $this->createBuyer($data['new_buyer'])->id;
-            } elseif (array_key_exists('buyer_id', $data)) {
-                $details['buyer_id'] = $data['buyer_id'];
+                $details['user_id'] = $this->createBuyer($data['new_buyer'])->id;
+            } elseif (array_key_exists('user_id', $data)) {
+                $details['user_id'] = $data['user_id'];
             }
 
-            foreach ([
-                'payment_method',
-                'discount_rate',
-                'dispatch_date',
-            ] as $field) {
+            foreach (
+                [
+                    'payment_method',
+                    'discount_rate',
+                    'dispatch_date',
+                ] as $field
+            ) {
                 if (array_key_exists($field, $data)) {
                     $details[$field] = $data[$field];
                 }
@@ -216,9 +221,7 @@ class NurserySaleService
                 $subtotal = 0;
 
                 foreach ($data['items'] as $item) {
-                    $plant = PlantSpecies::findOrFail(
-                        $item['plant_species_id']
-                    );
+                    $plant = PlantSpecies::findOrFail($item['plant_species_id']);
 
                     $quantity = (int) $item['quantity_bought'];
                     $unitPrice = (float) $plant->unit_price;
@@ -244,7 +247,7 @@ class NurserySaleService
                 );
             } elseif (array_key_exists('discount_rate', $details)) {
                 $subtotal = $sale->saleItems->sum(
-                    fn ($item) => $item->quantity_bought * $item->unit_price
+                    fn($item) => $item->quantity_bought * $item->unit_price
                 );
 
                 $details['total_amount'] = round(
@@ -280,7 +283,7 @@ class NurserySaleService
     private function sanitizeSaleData(array $data): array
     {
         $allowedFields = [
-            'buyer_id',
+            'user_id',
             'new_buyer',
             'payment_method',
             'discount_rate',
@@ -293,18 +296,18 @@ class NurserySaleService
         if (isset($data['new_buyer']) && is_array($data['new_buyer'])) {
             $data['new_buyer'] = array_intersect_key(
                 $data['new_buyer'],
-                array_flip(['buyer_name', 'contact_no'])
+                array_flip(['name', 'email', 'contact_no', 'password'])
             );
 
-            foreach (['buyer_name', 'contact_no'] as $field) {
+            foreach (['name', 'email', 'contact_no'] as $field) {
                 if (isset($data['new_buyer'][$field]) && is_string($data['new_buyer'][$field])) {
                     $data['new_buyer'][$field] = $this->sanitizeText($data['new_buyer'][$field]);
                 }
             }
 
-            if (is_string($data['new_buyer']['buyer_name'] ?? null)) {
-                $data['new_buyer']['buyer_name'] = mb_convert_case(
-                    mb_strtolower($data['new_buyer']['buyer_name']),
+            if (is_string($data['new_buyer']['name'] ?? null)) {
+                $data['new_buyer']['name'] = mb_convert_case(
+                    mb_strtolower($data['new_buyer']['name']),
                     MB_CASE_TITLE,
                     'UTF-8'
                 );
@@ -325,7 +328,7 @@ class NurserySaleService
 
         if (isset($data['items']) && is_array($data['items'])) {
             $data['items'] = array_map(
-                static fn ($item) => is_array($item)
+                static fn($item) => is_array($item)
                     ? array_intersect_key(
                         $item,
                         array_flip(['plant_species_id', 'quantity_bought'])
@@ -338,9 +341,85 @@ class NurserySaleService
         return $data;
     }
 
-    private function createBuyer(array $data): Buyer
+    private function validateSaleData(
+        array $data,
+        bool $updating = false
+    ): array {
+        return Validator::make($data, [
+            'user_id' => [
+                ...($updating ? ['sometimes'] : ['required_without:new_buyer']),
+                'nullable',
+                'integer',
+                'exists:users,id',
+            ],
+            'new_buyer' => [
+                ...($updating ? ['sometimes'] : ['required_without:user_id']),
+                'array:name,email,contact_no,password',
+            ],
+            'new_buyer.name' => [
+                'required_with:new_buyer',
+                'string',
+                'max:150',
+            ],
+            'new_buyer.email' => [
+                'required_with:new_buyer',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email'),
+            ],
+            'new_buyer.contact_no' => [
+                'required_with:new_buyer',
+                'string',
+                'regex:/^\+63[0-9]{10}$/',
+            ],
+            'new_buyer.password' => [
+                'required_with:new_buyer',
+                'string',
+                'min:8',
+            ],
+            'payment_method' => [
+                ...($updating ? ['sometimes', 'required'] : ['required']),
+                Rule::in(['Cash', 'GCash', 'Bank Transfer']),
+            ],
+            'discount_rate' => [
+                ...($updating ? ['sometimes', 'required'] : ['required']),
+                'numeric',
+                'between:0,1',
+            ],
+            'dispatch_date' => [
+                ...($updating ? ['sometimes'] : []),
+                'nullable',
+                'date',
+                'after_or_equal:today',
+                'before_or_equal:2029-12-31',
+            ],
+            'items' => [
+                ...($updating ? ['sometimes', 'required'] : ['required']),
+                'array',
+                'min:1',
+            ],
+            'items.*' => [
+                'required_with:items',
+                'array:plant_species_id,quantity_bought',
+            ],
+            'items.*.plant_species_id' => [
+                'required_with:items',
+                'integer',
+                'distinct',
+                'exists:plant_species,id',
+            ],
+            'items.*.quantity_bought' => [
+                'required_with:items',
+                'integer',
+                'min:1',
+                'max:100000',
+            ],
+        ])->validate();
+    }
+
+    private function createBuyer(array $data): User
     {
-        return Buyer::create($data);
+        return User::create($data);
     }
 
     private function sanitizeText(string $value): string

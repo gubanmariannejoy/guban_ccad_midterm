@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class NurserySale extends Model
 {
     protected $fillable = [
-        'buyer_id',
+        'user_id',
         'payment_method',
         'discount_rate',
         'total_amount',
@@ -28,7 +28,7 @@ class NurserySale extends Model
 
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(Buyer::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function saleItems(): HasMany

@@ -1,4 +1,3 @@
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -10,17 +9,18 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, ReceiptText, Sprout } from 'lucide-react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { Boxes, LayoutGrid, ReceiptText, Sprout, UsersRound } from 'lucide-react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        url: '/dashboard',
-        icon: LayoutGrid,
-    },
+const dashboardNavItem: NavItem = {
+    title: 'Dashboard',
+    url: '/dashboard',
+    icon: LayoutGrid,
+};
+
+const adminNavItems: NavItem[] = [
     {
         title: 'Plant Species',
         url: '/plant-species',
@@ -31,22 +31,24 @@ const mainNavItems: NavItem[] = [
         url: '/nursery-sales',
         icon: ReceiptText,
     },
-];
-
-const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        url: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
+        title: 'Inventory',
+        url: '/plant-inventory',
+        icon: Boxes,
     },
     {
-        title: 'Documentation',
-        url: 'https://laravel.com/docs/starter-kits',
-        icon: BookOpen,
+        title: 'Buyers',
+        url: '/buyers',
+        icon: UsersRound,
     },
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage<SharedData>().props;
+    const mainNavItems = auth.user.role === 'admin'
+        ? [dashboardNavItem, ...adminNavItems]
+        : [dashboardNavItem, { title: 'My Sales', url: '/nursery-sales', icon: ReceiptText }];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -66,7 +68,6 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

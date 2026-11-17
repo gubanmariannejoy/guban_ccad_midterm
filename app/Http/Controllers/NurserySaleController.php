@@ -6,7 +6,9 @@ use App\Http\Requests\StoreNurserySaleRequest;
 use App\Http\Requests\UpdateNurserySaleRequest;
 use App\Models\NurserySale;
 use App\Services\NurserySaleService;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class NurserySaleController extends Controller
 {
@@ -14,17 +16,22 @@ class NurserySaleController extends Controller
         private NurserySaleService $service
     ) {}
 
-    public function index()
+    public function index(): Response
     {
-        $sales = NurserySale::with('buyer')
+        $query = NurserySale::with(['buyer', 'saleItems.plantSpecies'])
             ->withCount('saleItems')
-            ->latest()
-            ->paginate(10);
+            ->latest();
+
+        if (! auth()->user()->isAdmin()) {
+            $query->where('user_id', auth()->id());
+        }
+
+        $sales = $query->paginate(10);
 
         return Inertia::render('nursery-sales/index', compact('sales'));
     }
 
-    public function create()
+    public function create(): Response
     {
         return Inertia::render(
             'nursery-sales/create',
@@ -32,7 +39,7 @@ class NurserySaleController extends Controller
         );
     }
 
-    public function edit($id)
+    public function edit(int|string $id): Response
     {
         return Inertia::render(
             'nursery-sales/create',
@@ -40,7 +47,7 @@ class NurserySaleController extends Controller
         );
     }
 
-    public function store(StoreNurserySaleRequest $request)
+    public function store(StoreNurserySaleRequest $request): RedirectResponse
     {
         $this->service->createSale(
             $request->validated()
@@ -53,8 +60,8 @@ class NurserySaleController extends Controller
 
     public function update(
         UpdateNurserySaleRequest $request,
-        $id
-    ) {
+        int|string $id
+    ): RedirectResponse {
         $this->service->updateSaleDetails($id, $request->validated());
 
         return redirect()
@@ -62,7 +69,7 @@ class NurserySaleController extends Controller
             ->with('success', 'Sale updated successfully.');
     }
 
-    public function confirm($id)
+    public function confirm(int|string $id): RedirectResponse
     {
         $this->service->confirmSaleById($id);
 
@@ -71,7 +78,7 @@ class NurserySaleController extends Controller
             ->with('success', 'Sale confirmed and inventory updated.');
     }
 
-    public function destroy($id)
+    public function destroy(int|string $id): RedirectResponse
     {
         $this->service->deleteSale($id);
 

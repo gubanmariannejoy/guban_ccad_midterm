@@ -1,16 +1,24 @@
 import { Button } from '@/components/ui/button';
+import { type SharedData } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 
 interface NurserySale {
     id: number;
-    buyer: {
-        buyer_name: string;
-    };
+    buyer?: {
+        name: string;
+    } | null;
     payment_method: string;
     total_amount: string;
     dispatch_date: string | null;
     status: string;
     sale_items_count: number;
+    sale_items: {
+        quantity_bought: number;
+        plant_species: {
+            plant_name: string;
+        } | null;
+    }[];
 }
 
 interface NurserySalesPage {
@@ -23,6 +31,9 @@ interface NurserySalesPage {
 }
 
 export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }) {
+    const { auth } = usePage<SharedData>().props;
+    const isAdmin = auth.user.role === 'admin';
+
     return (
         <>
             <Head title="Nursery sales" />
@@ -33,7 +44,7 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                             Back
                         </Link>
                         <nav className="flex gap-4 text-sm">
-                            <Link href="/plant-species">Plant species</Link>
+                            {isAdmin && <Link href="/plant-species">Plant species</Link>}
                             <Link href="/nursery-sales" className="underline underline-offset-4">
                                 Sales
                             </Link>
@@ -46,9 +57,11 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                     <div>
                         <h1 className="text-2xl font-semibold">Nursery sales</h1>
                         <p className="text-muted-foreground mt-1 text-sm">Browse sales, buyers, payment methods, and dispatch status.</p>
-                        <Button asChild className="mt-4">
-                            <Link href={route('nursery-sales.create')}>Create sale</Link>
-                        </Button>
+                        {isAdmin && (
+                            <Button asChild className="mt-4">
+                                <Link href={route('nursery-sales.create')}>Create sale</Link>
+                            </Button>
+                        )}
                     </div>
 
                     <div className="overflow-x-auto rounded-lg border">
@@ -57,19 +70,27 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                 <tr>
                                     <th className="px-4 py-3 font-medium">Sale</th>
                                     <th className="px-4 py-3 font-medium">Buyer</th>
+                                    <th className="px-4 py-3 font-medium">Plants and quantities</th>
                                     <th className="px-4 py-3 font-medium">Dispatch date</th>
                                     <th className="px-4 py-3 font-medium">Payment</th>
                                     <th className="px-4 py-3 text-right font-medium">Items</th>
                                     <th className="px-4 py-3 text-right font-medium">Total</th>
                                     <th className="px-4 py-3 font-medium">Status</th>
-                                    <th className="px-4 py-3 font-medium">Actions</th>
+                                    {isAdmin && <th className="px-4 py-3 font-medium">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
                                 {sales.data.map((sale) => (
                                     <tr key={sale.id}>
                                         <td className="px-4 py-3 font-medium">#{sale.id}</td>
-                                        <td className="px-4 py-3">{sale.buyer.buyer_name}</td>
+                                        <td className="px-4 py-3">{sale.buyer?.name ?? 'Buyer account not linked'}</td>
+                                        <td className="px-4 py-3">
+                                            {sale.sale_items.map((item) => (
+                                                <div key={`${sale.id}-${item.plant_species?.plant_name ?? 'plant'}-${item.quantity_bought}`}>
+                                                    {item.plant_species?.plant_name ?? 'Plant'} × {item.quantity_bought}
+                                                </div>
+                                            ))}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {sale.dispatch_date ? new Date(`${sale.dispatch_date}T00:00:00`).toLocaleDateString() : 'Not scheduled'}
                                         </td>
@@ -79,7 +100,7 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                         <td className="px-4 py-3 capitalize">
                                             <div className="flex items-center gap-2">
                                                 <span>{sale.status}</span>
-                                                {sale.status === 'pending' && (
+                                                {isAdmin && sale.status === 'pending' && (
                                                     <Link
                                                         href={route('nursery-sales.confirm', sale.id)}
                                                         method="post"
@@ -91,7 +112,7 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        {isAdmin && <td className="px-4 py-3">
                                             {sale.status === 'pending' ? (
                                                 <div className="flex items-center gap-2">
                                                     <Button size="sm" variant="outline" asChild>
@@ -112,12 +133,12 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                             ) : (
                                                 <span className="text-muted-foreground text-xs">Confirmed sale</span>
                                             )}
-                                        </td>
+                                        </td>}
                                     </tr>
                                 ))}
                                 {sales.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={8} className="text-muted-foreground px-4 py-10 text-center">
+                                        <td colSpan={isAdmin ? 9 : 8} className="text-muted-foreground px-4 py-10 text-center">
                                             No nursery sales have been recorded yet.
                                         </td>
                                     </tr>

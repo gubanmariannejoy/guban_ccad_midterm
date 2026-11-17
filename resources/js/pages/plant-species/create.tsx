@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { capitalizeFirstLetter } from '@/lib/utils';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { type FormEventHandler } from 'react';
 
@@ -13,16 +14,21 @@ interface PlantSpecies {
     botanical_name: string;
     pot_size: string;
     unit_price: string;
+    inventory?: {
+        quantity_available: number;
+    } | null;
 }
 
+const potSizes = ['XS-8cm', 'S-10cm', 'M-12cm', 'L-15cm', 'XL-20cm'];
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Plant species', href: route('plant-species.index') }];
 
 export default function CreatePlantSpecies({ plant }: { plant?: PlantSpecies }) {
     const { data, setData, post, put, processing, errors } = useForm({
         plant_name: plant?.plant_name ?? '',
         botanical_name: plant?.botanical_name ?? '',
-        pot_size: plant?.pot_size ?? '',
+        pot_size: plant && potSizes.includes(plant.pot_size) ? plant.pot_size : '',
         unit_price: plant?.unit_price ?? '',
+        quantity_available: String(plant?.inventory?.quantity_available ?? 0),
     });
 
     const submit: FormEventHandler = (event) => {
@@ -47,7 +53,12 @@ export default function CreatePlantSpecies({ plant }: { plant?: PlantSpecies }) 
                 <form onSubmit={submit} className="flex flex-col gap-5">
                     <div className="grid gap-2">
                         <Label htmlFor="plant_name">Plant name</Label>
-                        <Input id="plant_name" value={data.plant_name} onChange={(event) => setData('plant_name', event.target.value)} required />
+                        <Input
+                            id="plant_name"
+                            value={data.plant_name}
+                            onChange={(event) => setData('plant_name', capitalizeFirstLetter(event.target.value))}
+                            required
+                        />
                         <InputError message={errors.plant_name} />
                     </div>
 
@@ -56,7 +67,7 @@ export default function CreatePlantSpecies({ plant }: { plant?: PlantSpecies }) 
                         <Input
                             id="botanical_name"
                             value={data.botanical_name}
-                            onChange={(event) => setData('botanical_name', event.target.value)}
+                            onChange={(event) => setData('botanical_name', capitalizeFirstLetter(event.target.value))}
                             required
                         />
                         <InputError message={errors.botanical_name} />
@@ -64,7 +75,20 @@ export default function CreatePlantSpecies({ plant }: { plant?: PlantSpecies }) 
 
                     <div className="grid gap-2">
                         <Label htmlFor="pot_size">Pot size</Label>
-                        <Input id="pot_size" value={data.pot_size} onChange={(event) => setData('pot_size', event.target.value)} required />
+                        <select
+                            id="pot_size"
+                            className="bg-background h-10 rounded-md border px-3 text-sm"
+                            value={data.pot_size}
+                            onChange={(event) => setData('pot_size', event.target.value)}
+                            required
+                        >
+                            <option value="">Select a pot size</option>
+                            {potSizes.map((potSize) => (
+                                <option key={potSize} value={potSize}>
+                                    {potSize}
+                                </option>
+                            ))}
+                        </select>
                         <InputError message={errors.pot_size} />
                     </div>
 
@@ -80,6 +104,21 @@ export default function CreatePlantSpecies({ plant }: { plant?: PlantSpecies }) 
                             required
                         />
                         <InputError message={errors.unit_price} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="quantity_available">Available quantity</Label>
+                        <Input
+                            id="quantity_available"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={data.quantity_available}
+                            onChange={(event) => setData('quantity_available', event.target.value)}
+                            required
+                        />
+                        <InputError message={errors.quantity_available} />
                     </div>
 
                     <div className="flex gap-3">

@@ -8,6 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PlantSpecies extends Model
 {
+    public const POT_SIZES = [
+        'XS-8cm',
+        'S-10cm',
+        'M-12cm',
+        'L-15cm',
+        'XL-20cm',
+    ];
+
     protected $fillable = [
         'plant_name',
         'botanical_name',

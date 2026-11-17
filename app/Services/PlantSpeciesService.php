@@ -14,16 +14,18 @@ class PlantSpeciesService
     public function createPlantSpecies(array $data): PlantSpecies
     {
         $data = $this->validatePlantSpeciesData($data);
+        $quantityAvailable = $data['quantity_available'] ?? 0;
+        unset($data['quantity_available']);
 
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $quantityAvailable) {
             $plant = PlantSpecies::create($data);
 
             PlantInventory::create([
                 'plant_species_id' => $plant->id,
-                'quantity_available' => 0,
+                'quantity_available' => $quantityAvailable,
             ]);
 
-            return $plant;
+            return $plant->load('inventory');
         });
     }
 
@@ -31,17 +33,31 @@ class PlantSpeciesService
         int|string $id,
         array $data
     ): PlantSpecies {
-        $plant = PlantSpecies::findOrFail($id);
-        $data = $this->validatePlantSpeciesData($data, $plant);
+        return DB::transaction(function () use ($id, $data): PlantSpecies {
+            $plant = PlantSpecies::query()
+                ->lockForUpdate()
+                ->findOrFail($id);
+            $data = $this->validatePlantSpeciesData($data, $plant);
 
-        $plant->update($data);
+            $quantityAvailable = $data['quantity_available'] ?? null;
+            unset($data['quantity_available']);
 
-        return $plant->refresh();
+            $plant->update($data);
+
+            if ($quantityAvailable !== null) {
+                $plant->inventory()->updateOrCreate(
+                    ['plant_species_id' => $plant->id],
+                    ['quantity_available' => $quantityAvailable]
+                );
+            }
+
+            return $plant->load('inventory');
+        });
     }
 
     public function findForEdit(int|string $id): PlantSpecies
     {
-        return PlantSpecies::findOrFail($id);
+        return PlantSpecies::with('inventory')->findOrFail($id);
     }
 
     public function deletePlantSpecies(int|string $id): void
@@ -79,6 +95,7 @@ class PlantSpeciesService
             'botanical_name',
             'pot_size',
             'unit_price',
+            'quantity_available',
         ]));
 
         foreach (['plant_name', 'botanical_name', 'pot_size'] as $field) {
@@ -103,12 +120,23 @@ class PlantSpeciesService
                 Rule::unique('plant_species', 'botanical_name')
                     ->ignore($plant?->id),
             ],
-            'pot_size' => ['required', 'string', 'max:50'],
+            'pot_size' => [
+                'required',
+                'string',
+                Rule::in(PlantSpecies::POT_SIZES),
+            ],
             'unit_price' => [
                 'required',
                 'numeric',
                 'min:0.01',
                 'max:99999999.99',
+            ],
+            'quantity_available' => [
+                'sometimes',
+                'required',
+                'integer',
+                'min:0',
+                'max:100',
             ],
         ])->validate();
     }

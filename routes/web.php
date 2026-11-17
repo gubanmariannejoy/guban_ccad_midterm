@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\NurserySaleController;
 use App\Http\Controllers\PlantInventoryController;
@@ -18,25 +19,29 @@ Route::get('/', function (Request $request) {
 
 Route::middleware('auth')->group(function () {
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    Route::resource('plant-species', PlantSpeciesController::class)
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
-        ->parameters(['plant-species' => 'plant_species']);
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('buyers', BuyerController::class)
+            ->only(['index', 'edit', 'update', 'destroy']);
 
-    Route::resource('nursery-sales', NurserySaleController::class)
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
-        ->parameters(['nursery-sales' => 'nursery_sale']);
-    Route::post('nursery-sales/{nursery_sale}/confirm', [NurserySaleController::class, 'confirm'])
-        ->name('nursery-sales.confirm');
+        Route::resource('plant-species', PlantSpeciesController::class)
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
+            ->parameters(['plant-species' => 'plant_species']);
 
-    Route::resource('plant-inventory', PlantInventoryController::class)
-        ->only(['index']);
+        Route::resource('nursery-sales', NurserySaleController::class)
+            ->only(['create', 'store', 'edit', 'update', 'destroy'])
+            ->parameters(['nursery-sales' => 'nursery_sale']);
+        Route::post('nursery-sales/{nursery_sale}/confirm', [NurserySaleController::class, 'confirm'])
+            ->name('nursery-sales.confirm');
 
-    Route::resource('buyers', BuyerController::class)
-        ->only(['index']);
+        Route::resource('plant-inventory', PlantInventoryController::class)
+            ->only(['index']);
+    });
+
+    Route::get('nursery-sales', [NurserySaleController::class, 'index'])
+        ->name('nursery-sales.index');
+
 });
 
 require __DIR__.'/auth.php';

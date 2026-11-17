@@ -2,64 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PlantInventory;
-use Illuminate\Http\Request;
+use App\Models\PlantSpecies;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class PlantInventoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(): Response
     {
-        //
-    }
+        $plants = PlantSpecies::with('inventory')
+            ->orderBy('plant_name')
+            ->paginate(15);
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(PlantInventory $plantInventory)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(PlantInventory $plantInventory)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, PlantInventory $plantInventory)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(PlantInventory $plantInventory)
-    {
-        //
+        return Inertia::render('plant-inventory/index', compact('plants'));
     }
 }
