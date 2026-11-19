@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
 import { capitalizeFirstLetter } from '@/lib/utils';
+import { type BreadcrumbItem } from '@/types';
+import { type FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { type FormEventHandler } from 'react';
 
@@ -22,8 +23,16 @@ interface PlantSpecies {
 const potSizes = ['XS-8cm', 'S-10cm', 'M-12cm', 'L-15cm', 'XL-20cm'];
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Plant species', href: route('plant-species.index') }];
 
+interface PlantSpeciesForm extends Record<string, FormDataConvertible> {
+    plant_name: string;
+    botanical_name: string;
+    pot_size: string;
+    unit_price: string;
+    quantity_available: string;
+}
+
 export default function CreatePlantSpecies({ plant }: { plant?: PlantSpecies }) {
-    const { data, setData, post, put, processing, errors } = useForm({
+    const { data, setData, post, put, processing, errors } = useForm<PlantSpeciesForm>({
         plant_name: plant?.plant_name ?? '',
         botanical_name: plant?.botanical_name ?? '',
         pot_size: plant && potSizes.includes(plant.pot_size) ? plant.pot_size : '',

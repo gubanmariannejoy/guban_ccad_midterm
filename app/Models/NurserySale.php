@@ -10,6 +10,9 @@ class NurserySale extends Model
 {
     protected $fillable = [
         'user_id',
+        'buyer_name',
+        'buyer_contact_no',
+        'buyer_address',
         'payment_method',
         'discount_rate',
         'total_amount',

@@ -23,6 +23,15 @@ class DashboardController extends Controller
                     ->latest()
                     ->limit(10)
                     ->get(),
+                'stats' => [
+                    'pendingOrders' => $user->sales()->where('status', 'pending')->count(),
+                    'completedPurchases' => $user->sales()->where('status', 'completed')->count(),
+                ],
+                'featuredPlants' => PlantSpecies::with('inventory')
+                    ->whereHas('inventory', fn ($query) => $query->where('quantity_available', '>', 0))
+                    ->orderBy('plant_name')
+                    ->limit(4)
+                    ->get(),
             ]);
         }
 
@@ -33,7 +42,7 @@ class DashboardController extends Controller
                 'sales' => NurserySale::count(),
                 'pendingSales' => NurserySale::where('status', 'pending')->count(),
                 'availableStock' => PlantInventory::sum('quantity_available'),
-                'confirmedRevenue' => NurserySale::where('status', 'confirmed')
+                'confirmedRevenue' => NurserySale::whereIn('status', ['confirmed', 'completed'])
                     ->sum('total_amount'),
             ],
         ]);

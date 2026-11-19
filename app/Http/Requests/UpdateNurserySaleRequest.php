@@ -30,7 +30,7 @@ class UpdateNurserySaleRequest extends FormRequest
 
             'discount_rate' => ['sometimes', 'required', 'numeric', 'between:0,1'],
 
-            'dispatch_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:today', 'before_or_equal:2029-12-31'],
+            'dispatch_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:today', 'before_or_equal:2027-12-31'],
 
             'items' => ['sometimes', 'required', 'array', 'min:1'],
             'items.*' => ['required_with:items', 'array:plant_species_id,quantity_bought'],
@@ -64,7 +64,7 @@ class UpdateNurserySaleRequest extends FormRequest
             'discount_rate.between' => 'The discount must be between 0 and 1.',
             'payment_method.in' => 'Select a supported payment method.',
             'dispatch_date.after_or_equal' => 'The dispatch date cannot be in the past.',
-            'dispatch_date.before_or_equal' => 'The dispatch date cannot be after December 31, 2029.',
+            'dispatch_date.before_or_equal' => 'The dispatch date cannot be after December 31, 2027.',
             'items.min' => 'A sale must contain at least one plant.',
             'items.*.plant_species_id.distinct' => 'A plant can only be listed once per sale.',
             'items.*.quantity_bought.min' => 'Quantity must be at least one.',

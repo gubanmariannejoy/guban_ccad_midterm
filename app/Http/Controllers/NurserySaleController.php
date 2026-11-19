@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateNurserySaleRequest;
 use App\Models\NurserySale;
 use App\Services\NurserySaleService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -76,6 +77,42 @@ class NurserySaleController extends Controller
         return redirect()
             ->route('nursery-sales.index')
             ->with('success', 'Sale confirmed and inventory updated.');
+    }
+
+    public function cancel(int|string $id): RedirectResponse
+    {
+        $this->service->cancelSaleById($id);
+
+        return redirect()
+            ->route('nursery-sales.index')
+            ->with('success', 'Order cancelled.');
+    }
+
+    public function cancelForBuyer(Request $request, int|string $id): RedirectResponse
+    {
+        $this->service->cancelPendingSaleForBuyer($id, $request->user());
+
+        return redirect()
+            ->route('nursery-sales.index')
+            ->with('success', 'Your order has been cancelled.');
+    }
+
+    public function destroyForBuyer(Request $request, int|string $id): RedirectResponse
+    {
+        $this->service->deleteCompletedSaleForBuyer($id, $request->user());
+
+        return redirect()
+            ->route('nursery-sales.index')
+            ->with('success', 'Your completed order has been deleted.');
+    }
+
+    public function complete(int|string $id): RedirectResponse
+    {
+        $this->service->completeSaleById($id);
+
+        return redirect()
+            ->route('nursery-sales.index')
+            ->with('success', 'Order marked as completed.');
     }
 
     public function destroy(int|string $id): RedirectResponse

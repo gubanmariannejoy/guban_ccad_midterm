@@ -253,11 +253,11 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                                 id="dispatch_date"
                                 type="date"
                                 min={new Date().toISOString().slice(0, 10)}
-                                max="2029-12-31"
+                                max="2027-12-31"
                                 value={data.dispatch_date}
                                 onChange={(event) => {
                                     const value = event.target.value;
-                                    if (value && Number(value.slice(0, 4)) > 2029) return;
+                                    if (value && Number(value.slice(0, 4)) > 2027) return;
                                     setData('dispatch_date', value);
                                 }}
                             />

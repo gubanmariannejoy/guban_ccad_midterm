@@ -17,7 +17,7 @@ class PlantSpeciesService
         $quantityAvailable = $data['quantity_available'] ?? 0;
         unset($data['quantity_available']);
 
-        return DB::transaction(function () use ($data, $quantityAvailable) {
+        return DB::transaction(function () use ($data, $quantityAvailable): PlantSpecies {
             $plant = PlantSpecies::create($data);
 
             PlantInventory::create([
@@ -41,7 +41,6 @@ class PlantSpeciesService
 
             $quantityAvailable = $data['quantity_available'] ?? null;
             unset($data['quantity_available']);
-
             $plant->update($data);
 
             if ($quantityAvailable !== null) {

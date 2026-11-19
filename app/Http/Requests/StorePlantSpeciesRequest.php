@@ -10,7 +10,7 @@ class StorePlantSpeciesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-       return true;
+        return true;
     }
 
     protected function prepareForValidation(): void

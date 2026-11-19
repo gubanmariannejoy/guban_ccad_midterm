@@ -1,3 +1,4 @@
+import { type FormDataConvertible } from '@inertiajs/core';
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 
-interface LoginForm {
+interface LoginForm extends Record<string, FormDataConvertible> {
     email: string;
     password: string;
     remember: boolean;
@@ -36,7 +37,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
+        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in" showLogo={false}>
             <Head title="Log in" />
 
             <form className="flex flex-col gap-6" onSubmit={submit}>

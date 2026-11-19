@@ -32,6 +32,8 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    contact_no?: string | null;
+    address?: string | null;
     role: 'admin' | 'buyer';
     avatar?: string;
     email_verified_at: string | null;

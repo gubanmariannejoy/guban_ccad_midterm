@@ -1,3 +1,4 @@
+import { type FormDataConvertible } from '@inertiajs/core';
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
@@ -13,7 +14,7 @@ interface ResetPasswordProps {
     email: string;
 }
 
-interface ResetPasswordForm {
+interface ResetPasswordForm extends Record<string, FormDataConvertible> {
     token: string;
     email: string;
     password: string;

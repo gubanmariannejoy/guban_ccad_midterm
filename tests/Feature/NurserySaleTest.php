@@ -534,7 +534,7 @@ class NurserySaleTest extends TestCase
             [
                 'user_id' => $buyer->id,
                 'payment_method' => 'Cash',
-                'dispatch_date' => '2030-01-01',
+                'dispatch_date' => '2028-01-01',
                 'discount_rate' => 0.1,
                 'items' => [[
                     'plant_species_id' => $plant->id,
@@ -595,7 +595,7 @@ class NurserySaleTest extends TestCase
                 'user_id' => $buyer->id,
                 'payment_method' => 'Cash',
                 'discount_rate' => 1.5,
-                'dispatch_date' => '2030-01-01',
+                'dispatch_date' => '2028-01-01',
                 'items' => [[
                     'plant_species_id' => $plant->id,
                     'quantity_bought' => 1,

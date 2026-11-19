@@ -1,7 +1,8 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\BuyerController;
+use App\Http\Controllers\BuyerShopController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NurserySaleController;
 use App\Http\Controllers\PlantInventoryController;
 use App\Http\Controllers\PlantSpeciesController;
@@ -34,6 +35,10 @@ Route::middleware('auth')->group(function () {
             ->parameters(['nursery-sales' => 'nursery_sale']);
         Route::post('nursery-sales/{nursery_sale}/confirm', [NurserySaleController::class, 'confirm'])
             ->name('nursery-sales.confirm');
+        Route::post('nursery-sales/{nursery_sale}/cancel', [NurserySaleController::class, 'cancel'])
+            ->name('nursery-sales.cancel');
+        Route::post('nursery-sales/{nursery_sale}/complete', [NurserySaleController::class, 'complete'])
+            ->name('nursery-sales.complete');
 
         Route::resource('plant-inventory', PlantInventoryController::class)
             ->only(['index']);
@@ -41,6 +46,19 @@ Route::middleware('auth')->group(function () {
 
     Route::get('nursery-sales', [NurserySaleController::class, 'index'])
         ->name('nursery-sales.index');
+
+    Route::middleware('role:buyer')->name('buyer.')->group(function () {
+        Route::get('plants', [BuyerShopController::class, 'index'])->name('plants.index');
+        Route::get('cart', [BuyerShopController::class, 'cart'])->name('cart.index');
+        Route::post('cart/{plant}/items', [BuyerShopController::class, 'addToCart'])->name('cart.add');
+        Route::patch('cart/{plant}/items', [BuyerShopController::class, 'updateCart'])->name('cart.update');
+        Route::delete('cart/{plant}/items', [BuyerShopController::class, 'removeFromCart'])->name('cart.remove');
+        Route::post('checkout', [BuyerShopController::class, 'checkout'])->name('checkout');
+        Route::post('my-orders/{nursery_sale}/cancel', [NurserySaleController::class, 'cancelForBuyer'])
+            ->name('orders.cancel');
+        Route::delete('my-orders/{nursery_sale}', [NurserySaleController::class, 'destroyForBuyer'])
+            ->name('orders.destroy');
+    });
 
 });
 

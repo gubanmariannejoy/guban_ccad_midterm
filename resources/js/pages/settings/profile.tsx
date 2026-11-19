@@ -25,6 +25,8 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
         name: auth.user.name,
         email: auth.user.email,
+        contact_no: String(auth.user.contact_no ?? ''),
+        address: String(auth.user.address ?? ''),
     });
 
     const submit: FormEventHandler = (e) => {
@@ -39,7 +41,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Profile information" description="Update your name and email address" />
+                    <HeadingSmall title="Profile information" description="Update your contact details and account information" />
 
                     <form onSubmit={submit} className="space-y-6">
                         <div className="grid gap-2">
@@ -73,6 +75,30 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             />
 
                             <InputError className="mt-2" message={errors.email} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="contact_no">Contact number</Label>
+                            <Input
+                                id="contact_no"
+                                type="tel"
+                                value={data.contact_no}
+                                onChange={(e) => setData('contact_no', e.target.value)}
+                                placeholder="+639171234567"
+                            />
+                            <InputError className="mt-2" message={errors.contact_no} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="address">Address</Label>
+                            <textarea
+                                id="address"
+                                className="border-input bg-background min-h-24 rounded-md border px-3 py-2 text-sm"
+                                value={data.address}
+                                onChange={(e) => setData('address', e.target.value)}
+                                maxLength={1000}
+                            />
+                            <InputError className="mt-2" message={errors.address} />
                         </div>
 
                         {mustVerifyEmail && auth.user.email_verified_at === null && (

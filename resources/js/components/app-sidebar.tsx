@@ -1,17 +1,9 @@
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
-import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Boxes, LayoutGrid, ReceiptText, Sprout, UsersRound } from 'lucide-react';
+import { Boxes, LayoutGrid, ReceiptText, ShoppingCart, Sprout, UsersRound } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const dashboardNavItem: NavItem = {
@@ -45,9 +37,16 @@ const adminNavItems: NavItem[] = [
 
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
-    const mainNavItems = auth.user.role === 'admin'
-        ? [dashboardNavItem, ...adminNavItems]
-        : [dashboardNavItem, { title: 'My Sales', url: '/nursery-sales', icon: ReceiptText }];
+    const mainNavItems =
+        auth.user.role === 'admin'
+            ? [dashboardNavItem, ...adminNavItems]
+            : [
+                  dashboardNavItem,
+                  { title: 'Browse Plants', url: '/plants', icon: Sprout },
+                  { title: 'Shopping Cart', url: '/cart', icon: ShoppingCart },
+                  { title: 'My Orders', url: '/nursery-sales', icon: ReceiptText },
+                  { title: 'My Profile', url: '/settings/profile', icon: UsersRound },
+              ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

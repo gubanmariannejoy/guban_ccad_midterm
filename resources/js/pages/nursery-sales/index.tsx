@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { type SharedData } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 
 interface NurserySale {
     id: number;
+    buyer_name?: string | null;
+    buyer_contact_no?: string | null;
+    buyer_address?: string | null;
     buyer?: {
         name: string;
     } | null;
@@ -55,8 +57,10 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
 
                 <main className="mx-auto flex max-w-7xl flex-col gap-6 p-4 md:p-8">
                     <div>
-                        <h1 className="text-2xl font-semibold">Nursery sales</h1>
-                        <p className="text-muted-foreground mt-1 text-sm">Browse sales, buyers, payment methods, and dispatch status.</p>
+                        <h1 className="text-2xl font-semibold">{isAdmin ? 'Nursery sales' : 'My orders'}</h1>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            {isAdmin ? 'Review buyer orders, payments, and dispatch status.' : 'View your order history and current order status.'}
+                        </p>
                         {isAdmin && (
                             <Button asChild className="mt-4">
                                 <Link href={route('nursery-sales.create')}>Create sale</Link>
@@ -83,7 +87,12 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                 {sales.data.map((sale) => (
                                     <tr key={sale.id}>
                                         <td className="px-4 py-3 font-medium">#{sale.id}</td>
-                                        <td className="px-4 py-3">{sale.buyer?.name ?? 'Buyer account not linked'}</td>
+                                        <td className="px-4 py-3">
+                                            <div>{sale.buyer_name ?? sale.buyer?.name ?? 'Buyer account not linked'}</div>
+                                            {isAdmin && sale.buyer_contact_no && (
+                                                <div className="text-muted-foreground text-xs">{sale.buyer_contact_no}</div>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {sale.sale_items.map((item) => (
                                                 <div key={`${sale.id}-${item.plant_species?.plant_name ?? 'plant'}-${item.quantity_bought}`}>
@@ -96,7 +105,7 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                         </td>
                                         <td className="px-4 py-3">{sale.payment_method}</td>
                                         <td className="px-4 py-3 text-right">{sale.sale_items_count}</td>
-                                        <td className="px-4 py-3 text-right">{Number(sale.total_amount).toFixed(2)}</td>
+                                        <td className="px-4 py-3 text-right">₱{Number(sale.total_amount).toFixed(2)}</td>
                                         <td className="px-4 py-3 capitalize">
                                             <div className="flex items-center gap-2">
                                                 <span>{sale.status}</span>
@@ -110,30 +119,83 @@ export default function NurserySalesIndex({ sales }: { sales: NurserySalesPage }
                                                         Confirm
                                                     </Link>
                                                 )}
-                                            </div>
-                                        </td>
-                                        {isAdmin && <td className="px-4 py-3">
-                                            {sale.status === 'pending' ? (
-                                                <div className="flex items-center gap-2">
-                                                    <Button size="sm" variant="outline" asChild>
-                                                        <Link href={route('nursery-sales.edit', sale.id)}>Edit</Link>
-                                                    </Button>
+                                                {!isAdmin && sale.status === 'pending' && (
+                                                    <Link
+                                                        href={route('buyer.orders.cancel', sale.id)}
+                                                        method="post"
+                                                        as="button"
+                                                        className="rounded border px-2 py-1 text-xs"
+                                                        onBefore={() => window.confirm(`Cancel order #${sale.id}?`)}
+                                                    >
+                                                        Cancel
+                                                    </Link>
+                                                )}
+                                                {!isAdmin && sale.status === 'completed' && (
                                                     <Button
                                                         size="sm"
                                                         variant="destructive"
                                                         onClick={() => {
-                                                            if (window.confirm(`Delete pending sale #${sale.id}?`)) {
-                                                                router.delete(route('nursery-sales.destroy', sale.id));
+                                                            if (window.confirm(`Delete completed order #${sale.id}?`)) {
+                                                                router.delete(route('buyer.orders.destroy', sale.id));
                                                             }
                                                         }}
                                                     >
                                                         Delete
                                                     </Button>
-                                                </div>
-                                            ) : (
-                                                <span className="text-muted-foreground text-xs">Confirmed sale</span>
-                                            )}
-                                        </td>}
+                                                )}
+                                            </div>
+                                        </td>
+                                        {isAdmin && (
+                                            <td className="px-4 py-3">
+                                                {sale.status === 'pending' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Button size="sm" variant="outline" asChild>
+                                                            <Link href={route('nursery-sales.edit', sale.id)}>Edit</Link>
+                                                        </Button>
+                                                        <Link
+                                                            href={route('nursery-sales.cancel', sale.id)}
+                                                            method="post"
+                                                            as="button"
+                                                            className="rounded border px-2 py-1 text-xs"
+                                                        >
+                                                            Cancel
+                                                        </Link>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => {
+                                                                if (window.confirm(`Delete pending sale #${sale.id}?`)) {
+                                                                    router.delete(route('nursery-sales.destroy', sale.id));
+                                                                }
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                    </div>
+                                                ) : sale.status === 'confirmed' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Link
+                                                            href={route('nursery-sales.complete', sale.id)}
+                                                            method="post"
+                                                            as="button"
+                                                            className="rounded border px-2 py-1 text-xs"
+                                                        >
+                                                            Complete
+                                                        </Link>
+                                                        <Link
+                                                            href={route('nursery-sales.cancel', sale.id)}
+                                                            method="post"
+                                                            as="button"
+                                                            className="rounded border px-2 py-1 text-xs"
+                                                        >
+                                                            Cancel
+                                                        </Link>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">{sale.status}</span>
+                                                )}
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                                 {sales.data.length === 0 && (

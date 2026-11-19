@@ -56,9 +56,13 @@ class NurserySaleService
             $userId = isset($data['new_buyer'])
                 ? $this->createBuyer($data['new_buyer'])->id
                 : $data['user_id'];
+            $buyer = User::findOrFail($userId);
 
             $sale = NurserySale::create([
                 'user_id' => $userId,
+                'buyer_name' => $buyer->name,
+                'buyer_contact_no' => $buyer->contact_no,
+                'buyer_address' => $buyer->address,
                 'payment_method' => $data['payment_method'],
                 'discount_rate' => $data['discount_rate'],
                 'dispatch_date' => $data['dispatch_date'] ?? null,
@@ -132,8 +136,8 @@ class NurserySaleService
                     $inventory->quantity_available < $item->quantity_bought
                 ) {
                     throw ValidationException::withMessages([
-                        'inventory' => 'Insufficient stock for ' .
-                            $item->plantSpecies->plant_name . '.',
+                        'inventory' => 'Insufficient stock for '.
+                            $item->plantSpecies->plant_name.'.',
                     ]);
                 }
 
@@ -159,17 +163,83 @@ class NurserySaleService
         return $this->confirmSale($sale);
     }
 
+    public function cancelSaleById(int|string $id): NurserySale
+    {
+        return DB::transaction(function () use ($id): NurserySale {
+            $sale = NurserySale::whereKey($id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($sale->status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Only pending or confirmed orders can be cancelled.',
+                ]);
+            }
+
+            if ($sale->status === 'confirmed') {
+                foreach ($sale->saleItems as $item) {
+                    $inventory = PlantInventory::where('plant_species_id', $item->plant_species_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+                    $inventory->increment('quantity_available', $item->quantity_bought);
+                }
+            }
+
+            $sale->update(['status' => 'cancelled']);
+
+            return $sale->refresh()->load(['buyer', 'saleItems.plantSpecies']);
+        });
+    }
+
+    public function cancelPendingSaleForBuyer(int|string $id, User $buyer): NurserySale
+    {
+        return DB::transaction(function () use ($id, $buyer): NurserySale {
+            $sale = NurserySale::whereKey($id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $sale->user_id !== $buyer->id || $sale->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'sale' => 'Only your pending orders can be cancelled.',
+                ]);
+            }
+
+            $sale->update(['status' => 'cancelled']);
+
+            return $sale->refresh()->load(['buyer', 'saleItems.plantSpecies']);
+        });
+    }
+
+    public function completeSaleById(int|string $id): NurserySale
+    {
+        return DB::transaction(function () use ($id): NurserySale {
+            $sale = NurserySale::whereKey($id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($sale->status !== 'confirmed') {
+                throw ValidationException::withMessages([
+                    'status' => 'Only confirmed orders can be completed.',
+                ]);
+            }
+
+            $sale->update(['status' => 'completed']);
+
+            return $sale->refresh()->load(['buyer', 'saleItems.plantSpecies']);
+        });
+    }
+
     public function formatContactNumber(string $contact): string
     {
         $contact = $this->sanitizeText($contact);
         $digits = preg_replace('/\D+/', '', $contact) ?? '';
 
         if (str_starts_with($digits, '63')) {
-            return '+' . $digits;
+            return '+'.$digits;
         }
 
         if (str_starts_with($digits, '09') && strlen($digits) === 11) {
-            return '+63' . substr($digits, 1);
+            return '+63'.substr($digits, 1);
         }
 
         return $digits;
@@ -247,7 +317,7 @@ class NurserySaleService
                 );
             } elseif (array_key_exists('discount_rate', $details)) {
                 $subtotal = $sale->saleItems->sum(
-                    fn($item) => $item->quantity_bought * $item->unit_price
+                    fn ($item) => $item->quantity_bought * $item->unit_price
                 );
 
                 $details['total_amount'] = round(
@@ -273,6 +343,23 @@ class NurserySaleService
             if ($sale->status !== 'pending') {
                 throw ValidationException::withMessages([
                     'sale' => 'Only pending sales can be deleted.',
+                ]);
+            }
+
+            $sale->delete();
+        });
+    }
+
+    public function deleteCompletedSaleForBuyer(int|string $id, User $buyer): void
+    {
+        DB::transaction(function () use ($id, $buyer): void {
+            $sale = NurserySale::whereKey($id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $sale->user_id !== $buyer->id || $sale->status !== 'completed') {
+                throw ValidationException::withMessages([
+                    'sale' => 'Only your completed orders can be deleted.',
                 ]);
             }
 
@@ -328,7 +415,7 @@ class NurserySaleService
 
         if (isset($data['items']) && is_array($data['items'])) {
             $data['items'] = array_map(
-                static fn($item) => is_array($item)
+                static fn ($item) => is_array($item)
                     ? array_intersect_key(
                         $item,
                         array_flip(['plant_species_id', 'quantity_bought'])
@@ -391,7 +478,7 @@ class NurserySaleService
                 'nullable',
                 'date',
                 'after_or_equal:today',
-                'before_or_equal:2029-12-31',
+                'before_or_equal:2027-12-31',
             ],
             'items' => [
                 ...($updating ? ['sometimes', 'required'] : ['required']),

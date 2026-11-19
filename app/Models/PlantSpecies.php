@@ -23,6 +23,8 @@ class PlantSpecies extends Model
         'unit_price',
     ];
 
+    protected $hidden = ['image_path'];
+
     protected function casts(): array
     {
         return [
@@ -39,4 +41,5 @@ class PlantSpecies extends Model
     {
         return $this->hasOne(PlantInventory::class);
     }
+
 }

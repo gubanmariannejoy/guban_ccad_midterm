@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
 
 interface PlantSpecies {
@@ -24,7 +25,7 @@ interface PlantSpeciesPage {
 
 export default function PlantSpeciesIndex({ plants }: { plants: PlantSpeciesPage }) {
     return (
-        <>
+        <AppLayout>
             <Head title="Plant species" />
             <div className="bg-background text-foreground min-h-screen">
                 <header className="border-b">
@@ -126,6 +127,6 @@ export default function PlantSpeciesIndex({ plants }: { plants: PlantSpeciesPage
                     )}
                 </main>
             </div>
-        </>
+        </AppLayout>
     );
 }
