@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, Leaf, ReceiptText } from 'lucide-react';
+import { ArrowRight, Leaf, ReceiptText, Sprout } from 'lucide-react';
 
 interface Sale {
     id: number;
@@ -36,31 +36,57 @@ export default function BuyerDashboard({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Buyer dashboard" />
-            <main className="flex flex-1 flex-col gap-8 p-4 md:p-8">
-                <header className="rounded-2xl bg-emerald-50 p-6 md:p-8 dark:bg-emerald-950/30">
-                    <p className="text-muted-foreground text-sm font-medium">Green Nursery</p>
-                    <h1 className="mt-1 text-3xl font-semibold">Welcome to Green Nursery! 🌱</h1>
-                    <p className="text-muted-foreground mt-2">Find your favorite plants and bring nature closer to home.</p>
-                    <Button asChild className="mt-5">
-                        <Link href="/plants">Browse plants</Link>
-                    </Button>
+            <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-9 p-4 md:p-8">
+                <header className="bg-primary text-primary-foreground relative isolate overflow-hidden rounded-[2rem] p-6 sm:p-9 lg:p-12">
+                    <div className="border-primary-foreground/10 absolute -top-24 -right-10 -z-10 size-80 rounded-full border" />
+                    <div className="border-primary-foreground/10 absolute -right-24 -bottom-48 -z-10 size-96 rounded-full border" />
+                    <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
+                        <div className="max-w-2xl">
+                            <p className="text-primary-foreground/70 text-xs font-semibold tracking-[0.18em] uppercase">
+                                Plant Nursery &amp; Botanical
+                            </p>
+                            <h1 className="mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Bring a little more life home.</h1>
+                            <p className="text-primary-foreground/80 mt-4 max-w-xl leading-7">
+                                Explore our nursery collection, discover each plant’s botanical details, and find the right green companion for your
+                                space.
+                            </p>
+                            <Button asChild className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 mt-6 rounded-full px-5">
+                                <Link href="/plants">
+                                    Browse the collection <ArrowRight className="ml-2 size-4" aria-hidden="true" />
+                                </Link>
+                            </Button>
+                        </div>
+                        <div className="border-primary-foreground/15 bg-primary-foreground/10 hidden size-48 items-center justify-center rounded-[2.5rem] border lg:flex">
+                            <Sprout className="text-primary-foreground/90 size-28" strokeWidth={1.1} aria-hidden="true" />
+                        </div>
+                    </div>
                 </header>
 
                 <section aria-label="Purchase summary" className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-xl border p-5">
-                        <p className="text-muted-foreground text-sm">Pending orders</p>
-                        <p className="mt-2 text-3xl font-semibold">{stats.pendingOrders}</p>
+                    <div className="bg-card flex items-center gap-4 rounded-2xl border p-5 shadow-sm">
+                        <span className="bg-secondary text-primary flex size-12 items-center justify-center rounded-2xl">
+                            <ReceiptText className="size-5" aria-hidden="true" />
+                        </span>
+                        <span>
+                            <span className="text-muted-foreground block text-sm">Pending orders</span>
+                            <span className="mt-1 block text-3xl font-semibold tracking-tight">{stats.pendingOrders}</span>
+                        </span>
                     </div>
-                    <div className="rounded-xl border p-5">
-                        <p className="text-muted-foreground text-sm">Completed purchases</p>
-                        <p className="mt-2 text-3xl font-semibold">{stats.completedPurchases}</p>
+                    <div className="bg-card flex items-center gap-4 rounded-2xl border p-5 shadow-sm">
+                        <span className="bg-secondary text-primary flex size-12 items-center justify-center rounded-2xl">
+                            <Leaf className="size-5" aria-hidden="true" />
+                        </span>
+                        <span>
+                            <span className="text-muted-foreground block text-sm">Completed purchases</span>
+                            <span className="mt-1 block text-3xl font-semibold tracking-tight">{stats.completedPurchases}</span>
+                        </span>
                     </div>
                 </section>
 
                 <section className="space-y-4">
                     <div className="flex items-center justify-between gap-4">
                         <div>
-                            <h2 className="text-xl font-semibold">Featured plants</h2>
+                            <h2 className="font-serif text-2xl">Featured plants</h2>
                             <p className="text-muted-foreground mt-1 text-sm">A few nursery favorites, ready to order.</p>
                         </div>
                         <Link href="/plants" className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline">
@@ -70,13 +96,13 @@ export default function BuyerDashboard({
                     {featuredPlants.length ? (
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             {featuredPlants.map((plant) => (
-                                <article key={plant.id} className="rounded-xl border p-5">
-                                    <span className="flex size-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                                <article key={plant.id} className="bg-card rounded-2xl border p-5 shadow-sm">
+                                    <span className="bg-secondary text-primary flex size-12 items-center justify-center rounded-2xl">
                                         <Leaf className="size-5" aria-hidden="true" />
                                     </span>
-                                    <h3 className="mt-4 font-semibold">{plant.plant_name}</h3>
+                                    <h3 className="mt-4 font-serif text-xl">{plant.plant_name}</h3>
                                     <p className="text-muted-foreground text-sm italic">{plant.botanical_name}</p>
-                                    <p className="mt-3 font-medium">{peso(plant.unit_price)}</p>
+                                    <p className="text-primary mt-4 font-semibold">{peso(plant.unit_price)}</p>
                                     <p className="text-muted-foreground text-sm">
                                         {plant.inventory?.quantity_available ?? 0} available · {plant.pot_size}
                                     </p>
@@ -88,10 +114,10 @@ export default function BuyerDashboard({
                     )}
                 </section>
 
-                <section aria-labelledby="recent-orders-heading" className="rounded-xl border">
-                    <div className="flex items-center justify-between gap-4 border-b p-5">
+                <section aria-labelledby="recent-orders-heading" className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+                    <div className="flex items-center justify-between gap-4 border-b p-5 sm:p-6">
                         <div>
-                            <h2 id="recent-orders-heading" className="font-semibold">
+                            <h2 id="recent-orders-heading" className="font-serif text-2xl">
                                 Recent orders
                             </h2>
                             <p className="text-muted-foreground mt-1 text-sm">Track your latest nursery orders.</p>
@@ -103,9 +129,9 @@ export default function BuyerDashboard({
                     {sales.length ? (
                         <ul className="divide-y">
                             {sales.map((sale) => (
-                                <li key={sale.id} className="flex flex-wrap items-center justify-between gap-3 p-5">
+                                <li key={sale.id} className="flex flex-wrap items-center justify-between gap-3 p-5 sm:px-6">
                                     <div className="flex items-center gap-3">
-                                        <span className="bg-muted flex size-10 items-center justify-center rounded-full">
+                                        <span className="bg-secondary text-primary flex size-10 items-center justify-center rounded-xl">
                                             <ReceiptText className="size-5" aria-hidden="true" />
                                         </span>
                                         <div>

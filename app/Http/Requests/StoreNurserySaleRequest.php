@@ -15,16 +15,11 @@ class StoreNurserySaleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required_without:new_buyer', 'nullable', 'integer', 'exists:users,id'],
-            'new_buyer' => ['required_without:user_id', 'array:name,email,contact_no,password'],
-            'new_buyer.name' => ['required_with:new_buyer', 'string', 'max:150'],
-            'new_buyer.email' => ['required_with:new_buyer', 'email', 'max:255', 'unique:users,email'],
-            'new_buyer.contact_no' => ['required_with:new_buyer', 'string', 'regex:/^[0-9]{11}$/'],
-            'new_buyer.password' => ['required_with:new_buyer', 'string', 'min:8'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
 
             'payment_method' => [
                 'required',
-                Rule::in(['Cash', 'GCash', 'Bank Transfer']),
+                Rule::in(['Cash', 'GCash']),
             ],
 
             'discount_rate' => 'required|numeric|between:0,1',
@@ -54,12 +49,6 @@ class StoreNurserySaleRequest extends FormRequest
     {
         return [
             'user_id.exists' => 'The selected buyer account does not exist.',
-            'new_buyer.name.required_with' => 'Enter the buyer name.',
-            'new_buyer.email.required_with' => 'Enter the buyer email address.',
-            'new_buyer.email.unique' => 'An account already uses this email address.',
-            'new_buyer.contact_no.required_with' => 'Enter the buyer contact number.',
-            'new_buyer.contact_no.regex' => 'The buyer contact number must contain exactly 11 digits.',
-            'new_buyer.password.min' => 'The buyer password must contain at least 8 characters.',
             'payment_method.in' => 'Select a supported payment method.',
             'discount_rate.between' => 'The discount must be between 0 and 1.',
             'dispatch_date.after_or_equal' => 'The dispatch date cannot be in the past.',

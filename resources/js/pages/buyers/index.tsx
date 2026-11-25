@@ -1,5 +1,5 @@
-import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 
@@ -31,6 +31,9 @@ export default function BuyersIndex({ buyers }: { buyers: BuyersPage }) {
                     <p className="text-muted-foreground text-sm font-medium">Administration</p>
                     <h1 className="mt-1 text-2xl font-semibold">Buyers</h1>
                     <p className="text-muted-foreground mt-2">View buyer contact information and their recorded sales.</p>
+                    <Button asChild className="mt-4">
+                        <Link href={route('buyers.create')}>Add buyer</Link>
+                    </Button>
                 </header>
 
                 <div className="overflow-x-auto rounded-lg border">
@@ -59,8 +62,6 @@ export default function BuyersIndex({ buyers }: { buyers: BuyersPage }) {
                                             <Button
                                                 size="sm"
                                                 variant="destructive"
-                                                disabled={buyer.sales_count > 0}
-                                                title={buyer.sales_count > 0 ? 'Buyers with sales records cannot be deleted.' : undefined}
                                                 onClick={() => {
                                                     if (window.confirm(`Delete buyer ${buyer.name}?`)) {
                                                         router.delete(route('buyers.destroy', buyer.id));
@@ -70,9 +71,6 @@ export default function BuyersIndex({ buyers }: { buyers: BuyersPage }) {
                                                 Delete
                                             </Button>
                                         </div>
-                                        {buyer.sales_count > 0 && (
-                                            <p className="text-muted-foreground mt-1 text-xs">Buyer has sales records</p>
-                                        )}
                                     </td>
                                 </tr>
                             ))}

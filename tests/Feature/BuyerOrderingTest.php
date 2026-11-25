@@ -124,6 +124,22 @@ class BuyerOrderingTest extends TestCase
             ->assertSessionHasErrors('quantity');
     }
 
+    public function test_buyers_cannot_set_cart_quantities_outside_the_allowed_range(): void
+    {
+        $buyer = User::factory()->create(['role' => 'buyer']);
+        $plant = app(PlantSpeciesService::class)->createPlantSpecies([
+            'plant_name' => 'Aloe Vera',
+            'botanical_name' => 'Aloe vera',
+            'pot_size' => 'S-10cm',
+            'unit_price' => 80,
+            'quantity_available' => 2,
+        ]);
+
+        $this->actingAs($buyer)
+            ->patch(route('buyer.cart.update', $plant), ['quantity' => 0])
+            ->assertSessionHasErrors('quantity');
+    }
+
     public function test_buyer_checkout_rejects_dispatch_dates_after_2027(): void
     {
         $buyer = User::factory()->create([

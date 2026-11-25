@@ -3,40 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Models\PlantSpecies;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdatePlantSpeciesRequest extends FormRequest
+class UpdatePlantSpeciesRequest extends PlantSpeciesRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    protected function prepareForValidation(): void
-    {
-        foreach (['plant_name', 'botanical_name', 'pot_size'] as $field) {
-            $value = $this->input($field);
-
-            if (is_string($value)) {
-                $this->merge([$field => trim($value)]);
-            }
-        }
-
-        $botanicalName = $this->input('botanical_name');
-
-        if (is_string($botanicalName) && $botanicalName !== '') {
-            $this->merge([
-                'botanical_name' => mb_convert_case(
-                    mb_strtolower(strip_tags($botanicalName)),
-                    MB_CASE_TITLE,
-                    'UTF-8'
-                ),
-            ]);
-        }
-
-    }
-
     public function rules(): array
     {
         $id = $this->route('plant_species');

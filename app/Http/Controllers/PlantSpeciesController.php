@@ -18,7 +18,7 @@ class PlantSpeciesController extends Controller
 
     public function index(): Response
     {
-        $plants = PlantSpecies::with('inventory')
+        $plants = PlantSpecies::with('inventory') // need further optimization
             ->withCount('saleItems')
             ->latest()
             ->paginate(10);

@@ -24,7 +24,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin')->group(function () {
         Route::resource('buyers', BuyerController::class)
-            ->only(['index', 'edit', 'update', 'destroy']);
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
         Route::resource('plant-species', PlantSpeciesController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy'])

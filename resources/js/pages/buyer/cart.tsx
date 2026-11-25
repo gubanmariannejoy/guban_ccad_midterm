@@ -181,7 +181,6 @@ export default function BuyerCart({ items, buyer }: { items: CartItem[]; buyer: 
                                 >
                                     <option>Cash</option>
                                     <option>GCash</option>
-                                    <option>Bank Transfer</option>
                                 </select>
                                 <InputError message={form.errors.payment_method} />
                             </div>

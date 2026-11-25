@@ -28,10 +28,10 @@ class UpdateBuyerRequest extends FormRequest
         if (is_string($contact)) {
             $digits = preg_replace('/\D+/', '', $contact) ?? '';
 
-            if (str_starts_with($digits, '63')) {
-                $contact = '+'.$digits;
+            if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+                $contact = '0'.substr($digits, 2);
             } elseif (str_starts_with($digits, '09') && strlen($digits) === 11) {
-                $contact = '+63'.substr($digits, 1);
+                $contact = $digits;
             } elseif (trim($contact) === '') {
                 $contact = null;
             } else {
@@ -57,7 +57,7 @@ class UpdateBuyerRequest extends FormRequest
             'contact_no' => [
                 'nullable',
                 'string',
-                'regex:/^\+63[0-9]{10}$/',
+                'regex:/^09[0-9]{9}$/',
             ],
         ];
     }
@@ -65,7 +65,7 @@ class UpdateBuyerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'contact_no.regex' => 'Enter a valid Philippine mobile number.',
+            'contact_no.regex' => 'Enter a valid Philippine mobile number starting with 09 and containing 11 digits.',
         ];
     }
 }

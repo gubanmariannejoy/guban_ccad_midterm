@@ -17,14 +17,14 @@ class NurserySaleController extends Controller
         private NurserySaleService $service
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $query = NurserySale::with(['buyer', 'saleItems.plantSpecies'])
+        $query = NurserySale::with(['buyer', 'saleItems.plantSpecies']) // need further optimization
             ->withCount('saleItems')
             ->latest();
 
-        if (! auth()->user()->isAdmin()) {
-            $query->where('user_id', auth()->id());
+        if (! $request->user()?->isAdmin()) {
+            $query->where('user_id', $request->user()?->getKey());
         }
 
         $sales = $query->paginate(10);

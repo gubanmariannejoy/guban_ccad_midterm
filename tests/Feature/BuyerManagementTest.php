@@ -12,6 +12,31 @@ class BuyerManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_can_create_a_buyer(): void
+    {
+        $this->withoutVite();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('buyers.create'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('buyers/create'));
+
+        $this->post(route('buyers.store'), [
+            'name' => 'Alice Buyer',
+            'email' => 'alice@example.test',
+            'contact_no' => '09171234567',
+            'password' => 'temporary-secret',
+        ])->assertRedirect(route('buyers.index'));
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Alice Buyer',
+            'email' => 'alice@example.test',
+            'contact_no' => '09171234567',
+            'role' => 'buyer',
+        ]);
+    }
+
     public function test_admin_can_edit_buyer_information(): void
     {
         $this->withoutVite();
@@ -20,7 +45,7 @@ class BuyerManagementTest extends TestCase
             'role' => 'buyer',
             'name' => 'Old Name',
             'email' => 'old@example.test',
-            'contact_no' => null,
+            'contact_no' => '+639171234560',
         ]);
 
         $this->actingAs($admin)
@@ -28,7 +53,8 @@ class BuyerManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('buyers/edit')
-                ->where('buyer.id', $buyer->id));
+                ->where('buyer.id', $buyer->id)
+                ->where('buyer.contact_no', '09171234560'));
 
         $this->put(route('buyers.update', $buyer->id), [
             'name' => 'New Name',
@@ -40,9 +66,13 @@ class BuyerManagementTest extends TestCase
             'id' => $buyer->id,
             'name' => 'New Name',
             'email' => 'new@example.test',
-            'contact_no' => '+639171234567',
+            'contact_no' => '09171234567',
             'role' => 'buyer',
         ]);
+
+        $this->get(route('buyers.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('buyers.data.0.contact_no', '09171234567'));
     }
 
     public function test_admin_can_delete_a_buyer_without_sales(): void
@@ -57,7 +87,7 @@ class BuyerManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $buyer->id]);
     }
 
-    public function test_admin_cannot_delete_a_buyer_with_sales_history(): void
+    public function test_admin_can_delete_a_buyer_with_sales_history(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $buyer = User::factory()->create(['role' => 'buyer']);
@@ -78,11 +108,10 @@ class BuyerManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->from(route('buyers.index'))
             ->delete(route('buyers.destroy', $buyer->id))
-            ->assertRedirect(route('buyers.index'))
-            ->assertSessionHasErrors('buyer');
+            ->assertRedirect(route('buyers.index'));
 
-        $this->assertDatabaseHas('users', ['id' => $buyer->id]);
+        $this->assertDatabaseMissing('users', ['id' => $buyer->id]);
+        $this->assertDatabaseMissing('nursery_sales', ['user_id' => $buyer->id]);
     }
 }

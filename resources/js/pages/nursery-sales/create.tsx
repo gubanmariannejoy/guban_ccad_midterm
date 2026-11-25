@@ -4,11 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { capitalizeFirstLetter } from '@/lib/utils';
 import { type FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { CalendarDays } from 'lucide-react';
-import { useRef, useState, type FormEventHandler } from 'react';
+import { useRef, type FormEventHandler } from 'react';
 
 interface BuyerOption {
     id: number;
@@ -39,12 +38,6 @@ interface SaleRecord {
 
 interface NurserySaleForm extends Record<string, FormDataConvertible> {
     user_id: string;
-    new_buyer: {
-        name: string;
-        email: string;
-        contact_no: string;
-        password: string;
-    };
     payment_method: string;
     discount_rate: string;
     dispatch_date: string;
@@ -57,16 +50,9 @@ interface NurserySaleForm extends Record<string, FormDataConvertible> {
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Nursery sales', href: route('nursery-sales.index') }];
 
 export default function CreateNurserySale({ buyers, plants, sale }: { buyers: BuyerOption[]; plants: PlantOption[]; sale?: SaleRecord }) {
-    const [addingBuyer, setAddingBuyer] = useState(false);
     const dispatchDateRef = useRef<HTMLInputElement>(null);
     const { data, setData, post, put, transform, processing, errors } = useForm<NurserySaleForm>({
         user_id: sale ? String(sale.user_id) : '',
-        new_buyer: {
-            name: '',
-            email: '',
-            contact_no: '',
-            password: '',
-        },
         payment_method: sale?.payment_method ?? 'Cash',
         discount_rate: sale?.discount_rate ?? '0',
         dispatch_date: sale?.dispatch_date?.slice(0, 10) ?? '',
@@ -79,13 +65,7 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
         transform((formData) => {
-            const { user_id, new_buyer, ...saleData } = formData;
-
-            if (addingBuyer) {
-                return { ...saleData, user_id: null, new_buyer };
-            }
-
-            return { ...saleData, user_id: Number(user_id) };
+            return { ...formData, user_id: Number(formData.user_id) };
         });
 
         if (sale) {
@@ -112,28 +92,12 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
 
                 <form onSubmit={submit} className="flex flex-col gap-5">
                     <div className="grid gap-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <Label htmlFor="user_id">Buyer account</Label>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    setAddingBuyer((isAdding) => !isAdding);
-                                    if (!addingBuyer) {
-                                        setData('user_id', '');
-                                    }
-                                }}
-                            >
-                                {addingBuyer ? 'Choose existing buyer' : 'Add buyer'}
-                            </Button>
-                        </div>
+                        <Label htmlFor="user_id">Buyer account</Label>
                         <select
                             id="user_id"
                             className="bg-background h-10 rounded-md border px-3 text-sm"
                             value={data.user_id}
-                            disabled={addingBuyer}
-                            required={!addingBuyer}
+                            required
                             onChange={(event) => setData('user_id', event.target.value)}
                         >
                             <option value="">Select a registered user</option>
@@ -146,75 +110,6 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                         <InputError message={errors.user_id} />
                     </div>
 
-                    {addingBuyer && (
-                        <section className="grid gap-4 rounded-lg border p-4">
-                            <h2 className="font-medium">New buyer account</h2>
-                            <p className="text-muted-foreground text-sm">
-                                Create a user account for this buyer. They can sign in with these credentials.
-                            </p>
-                            <div className="grid gap-2">
-                                <Label htmlFor="new_buyer_name">Buyer name</Label>
-                                <Input
-                                    id="new_buyer_name"
-                                    value={data.new_buyer.name}
-                                    onChange={(event) =>
-                                        setData('new_buyer', {
-                                            ...data.new_buyer,
-                                            name: capitalizeFirstLetter(event.target.value),
-                                        })
-                                    }
-                                    required
-                                />
-                                <InputError message={errors['new_buyer.name']} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="new_buyer_email">Email</Label>
-                                <Input
-                                    id="new_buyer_email"
-                                    type="email"
-                                    autoComplete="email"
-                                    value={data.new_buyer.email}
-                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, email: event.target.value })}
-                                    required
-                                />
-                                <InputError message={errors['new_buyer.email']} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="new_buyer_contact">Contact number</Label>
-                                <Input
-                                    id="new_buyer_contact"
-                                    type="tel"
-                                    inputMode="numeric"
-                                    maxLength={11}
-                                    pattern="[0-9]{11}"
-                                    title="Enter exactly 11 digits."
-                                    value={data.new_buyer.contact_no}
-                                    onChange={(event) =>
-                                        setData('new_buyer', {
-                                            ...data.new_buyer,
-                                            contact_no: event.target.value.replace(/[^0-9]/g, '').slice(0, 11),
-                                        })
-                                    }
-                                    required
-                                />
-                                <InputError message={errors['new_buyer.contact_no']} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="new_buyer_password">Temporary password</Label>
-                                <Input
-                                    id="new_buyer_password"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    minLength={8}
-                                    value={data.new_buyer.password}
-                                    onChange={(event) => setData('new_buyer', { ...data.new_buyer, password: event.target.value })}
-                                    required
-                                />
-                                <InputError message={errors['new_buyer.password']} />
-                            </div>
-                        </section>
-                    )}
-
                     <div className="grid gap-2">
                         <Label htmlFor="payment_method">Payment method</Label>
                         <select
@@ -225,7 +120,6 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                         >
                             <option>Cash</option>
                             <option>GCash</option>
-                            <option>Bank Transfer</option>
                         </select>
                         <InputError message={errors.payment_method} />
                     </div>
@@ -252,6 +146,7 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                                 ref={dispatchDateRef}
                                 id="dispatch_date"
                                 type="date"
+                                className="[&::-webkit-calendar-picker-indicator]:hidden"
                                 min={new Date().toISOString().slice(0, 10)}
                                 max="2027-12-31"
                                 value={data.dispatch_date}
@@ -349,14 +244,14 @@ export default function CreateNurserySale({ buyers, plants, sale }: { buyers: Bu
                     </section>
 
                     <div className="flex gap-3">
-                        <Button type="submit" disabled={processing || (buyers.length === 0 && !addingBuyer) || plants.length === 0}>
+                        <Button type="submit" disabled={processing || buyers.length === 0 || plants.length === 0}>
                             {sale ? 'Update sale' : 'Save sale'}
                         </Button>
                         <Button variant="outline" asChild>
                             <Link href={route('nursery-sales.index')}>Cancel</Link>
                         </Button>
                     </div>
-                    {buyers.length === 0 && !addingBuyer && <p className="text-destructive text-sm">Add a buyer before creating a sale.</p>}
+                    {buyers.length === 0 && <p className="text-destructive text-sm">Add a buyer before creating a sale.</p>}
                     {plants.length === 0 && <p className="text-destructive text-sm">Add a plant species before creating a sale.</p>}
                 </form>
             </main>

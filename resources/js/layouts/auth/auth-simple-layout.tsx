@@ -17,10 +17,10 @@ export default function AuthSimpleLayout({ children, title, description, showLog
                     <div className="flex flex-col items-center gap-4">
                         {showLogo && (
                             <Link href={route('home')} className="flex flex-col items-center gap-2 font-medium">
-                                <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                    <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                                </div>
-                                <span className="sr-only">{title}</span>
+                                <span className="bg-primary/10 flex size-12 items-center justify-center rounded-2xl">
+                                    <AppLogoIcon className="text-primary size-7" />
+                                </span>
+                                <span className="text-sm font-semibold">Plant Nursery &amp; Botanical</span>
                             </Link>
                         )}
 
